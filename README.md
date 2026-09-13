@@ -14,10 +14,12 @@
 ## インストール
 
 ```bash
-npm install github:onokomachi/learning-app-kit#v0.1.0
+# コミットSHAで固定する（再現性のため）。GitHub の Releases でタグを打てば #v0.1.0 のように書ける
+npm install github:onokomachi/learning-app-kit#bcb07d7d529eaf811634c02d09cc568d4ecd0293
 ```
 
-（Public リポジトリなので Vercel のビルドでも認証なしで取得できる）
+（Public リポジトリなので Vercel のビルドでも認証なしで取得できる。
+`prepare` で `dist/` をビルドするので、インストール側に TypeScript は不要）
 
 ## review — 間隔反復
 
