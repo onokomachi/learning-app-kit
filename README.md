@@ -14,13 +14,15 @@
 ## インストール
 
 ```bash
-# git+https を明示し、コミットSHAで固定する。
-# github: 短縮形だと lockfile が git+ssh に解決され、SSH鍵の無い CI / Vercel で npm ci が失敗する
-npm install git+https://github.com/onokomachi/learning-app-kit.git#bcb07d7d529eaf811634c02d09cc568d4ecd0293
+npm install https://github.com/onokomachi/learning-app-kit/archive/<コミットSHA>.tar.gz
 ```
 
-（Public リポジトリなので Vercel のビルドでも認証なしで取得できる。
-`prepare` で `dist/` をビルドするので、インストール側に TypeScript は不要）
+**tarball URL を使う**。`github:` や `git+https:` の形で入れると、npm が lockfile の
+`resolved` を `git+ssh://git@github.com/...` に正規化してしまい、SSH鍵の無い
+GitHub Actions / Vercel で `npm ci` が失敗する（このリポジトリが Public でも起きる）。
+
+tarball なら素の HTTPS だけで完結し、lockfile に integrity ハッシュも残る。
+`dist/` はコミット済みなので、インストール側にビルド環境（TypeScript）は要らない。
 
 ## review — 間隔反復
 

@@ -24,3 +24,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      # dist/ はコミット済み（tarball 配布で prepare が走らないため）。
+      # src と食いちがったまま公開されないよう、再ビルドして差分が出たら落とす。
+      - name: dist/ が src と一致しているか
+        run: |
+          if [ -n "$(git status --porcelain dist)" ]; then
+            echo "::error::dist/ が src と食いちがっています。npm run build してコミットしてください"
+            git --no-pager diff --stat dist
+            exit 1
+          fi
+          echo "✅ dist/ は最新です"
