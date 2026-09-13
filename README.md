@@ -14,7 +14,7 @@
 ## インストール
 
 ```bash
-npm install https://github.com/onokomachi/learning-app-kit/archive/<コミットSHA>.tar.gz
+npm install https://github.com/onokomachi/learning-app-kit/archive/acac3d2608976f854d0706404d6b9222dc16e50b.tar.gz
 ```
 
 **tarball URL を使う**。`github:` や `git+https:` の形で入れると、npm が lockfile の
