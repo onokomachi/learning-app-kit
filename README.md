@@ -14,8 +14,9 @@
 ## インストール
 
 ```bash
-# コミットSHAで固定する（再現性のため）。GitHub の Releases でタグを打てば #v0.1.0 のように書ける
-npm install github:onokomachi/learning-app-kit#bcb07d7d529eaf811634c02d09cc568d4ecd0293
+# git+https を明示し、コミットSHAで固定する。
+# github: 短縮形だと lockfile が git+ssh に解決され、SSH鍵の無い CI / Vercel で npm ci が失敗する
+npm install git+https://github.com/onokomachi/learning-app-kit.git#bcb07d7d529eaf811634c02d09cc568d4ecd0293
 ```
 
 （Public リポジトリなので Vercel のビルドでも認証なしで取得できる。
