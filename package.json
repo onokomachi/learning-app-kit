@@ -1,0 +1,41 @@
+{
+  "name": "learning-app-kit",
+  "version": "0.1.0",
+  "description": "単元学習アプリの共通基盤: 間隔反復スケジューラ / 問題ジェネレーターの汎用検証ヘルパー / CIテンプレート",
+  "type": "module",
+  "license": "MIT",
+  "repository": "github:onokomachi/learning-app-kit",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./review": {
+      "types": "./dist/review/index.d.ts",
+      "import": "./dist/review/index.js"
+    },
+    "./verify": {
+      "types": "./dist/verify/index.d.ts",
+      "import": "./dist/verify/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts",
+    "check": "npm run build && npm test",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}
