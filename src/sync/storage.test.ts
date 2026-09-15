@@ -1,0 +1,118 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseSyncable, toRows, createSyncedStorage, localAdapter } from './storage.js';
+import { lookupSkill, skillLabel, listApps } from '../catalog/index.js';
+
+/* ---------- localStorage の最小スタブ（Node には無いので用意する） ---------- */
+function installLocalStorage() {
+  const map = new Map<string, string>();
+  (globalThis as any).localStorage = {
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => void map.set(k, v),
+    removeItem: (k: string) => void map.delete(k),
+  };
+  return map;
+}
+
+test('parseSyncable: persist の形から state を取り出す / 壊れていたら null', () => {
+  assert.deepEqual(parseSyncable('{"state":{"mastery":{}},"version":2}'), { mastery: {} });
+  assert.equal(parseSyncable('こわれたJSON'), null);
+  assert.equal(parseSyncable(null), null);
+});
+
+test('toRows: mastery と review を1行にまとめる', () => {
+  const rows = toRows('suihei', 'dev-1', {
+    mastery: { 'rel-perp': { attempts: 6, corrects: 5, perfectStreak: 2 } },
+    review: { 'rel-perp': { box: 2, lastTs: 100, nextDueTs: 200 } },
+  });
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0], {
+    device_key: 'dev-1', app_id: 'suihei', skill_id: 'rel-perp',
+    attempts: 6, corrects: 5, perfect_streak: 2,
+    box: 2, next_due_ts: 200, last_ts: 100,
+  });
+});
+
+test('toRows: review が無いスキルでも欠落させず null で送る', () => {
+  const rows = toRows('suihei', 'dev-1', { mastery: { 'rel-para': { attempts: 1, corrects: 0 } } });
+  assert.equal(rows[0]!.box, null);
+  assert.equal(rows[0]!.perfect_streak, 0);
+});
+
+test('設定が無ければ localAdapter と同じ＝今までどおり端末内だけで動く', () => {
+  installLocalStorage();
+  const s = createSyncedStorage({ appId: 'suihei' });
+  assert.equal(s.getItem, localAdapter.getItem);
+  s.setItem('k', 'v');
+  assert.equal(s.getItem('k'), 'v');
+});
+
+test('同期ありでも、読み書きは localStorage に対して即座に効く（オフラインファースト）', async () => {
+  const map = installLocalStorage();
+  const calls: any[] = [];
+  (globalThis as any).fetch = async (url: string, init: any) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return { ok: true, status: 200 } as any;
+  };
+  let synced: any = null;
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k',
+    debounceMs: 5, onSync: (r) => { synced = r; },
+  });
+  const payload = JSON.stringify({ state: { mastery: { 'rel-perp': { attempts: 2, corrects: 2 } } }, version: 2 });
+  s.setItem('suihei_progress_v1', payload);
+
+  // 送信を待たずに、その場で端末から読めている
+  assert.equal(map.get('suihei_progress_v1'), payload);
+  assert.equal(calls.length, 0, 'デバウンス中はまだ送らない');
+
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls.length, 1, 'デバウンス後に1回だけ送る');
+  assert.equal(calls[0].body[0].skill_id, 'rel-perp');
+  assert.deepEqual(synced, { ok: true, pushed: 1 });
+});
+
+test('ネットが落ちていても setItem は投げない（学習を止めない）', async () => {
+  installLocalStorage();
+  (globalThis as any).fetch = async () => { throw new Error('offline'); };
+  let synced: any = null;
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k',
+    debounceMs: 5, onSync: (r) => { synced = r; },
+  });
+  s.setItem('k', JSON.stringify({ state: { mastery: { a: { attempts: 1, corrects: 1 } } } }));
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(synced.ok, false);
+  assert.equal(synced.error, 'offline');
+});
+
+/* ---------- カタログ ---------- */
+test('lookupSkill: 記号を人が読めるものに戻す', () => {
+  const r = lookupSkill('suihei', 'rel-perp');
+  assert.ok(r, 'rel-perp が引ける');
+  assert.equal(r!.app_title, '垂直・平行と四角形');
+  assert.equal(r!.module_title, 'すいちょく・平行はっけん');
+  assert.match(r!.label, /垂直をみつける/);
+});
+
+test('lookupSkill: 未知の記号は null（黙って捨てない）', () => {
+  assert.equal(lookupSkill('suihei', 'nope'), null);
+  assert.equal(lookupSkill('unknown-app', 'rel-perp'), null);
+});
+
+test('skillLabel: カタログに無くても画面が空にならない', () => {
+  assert.equal(skillLabel('suihei', 'nope'), 'nope');
+});
+
+test('誤概念が skillId に結びついている', () => {
+  const r = lookupSkill('suihei', 'eh-diag');
+  assert.ok(r!.misconceptions.length >= 3, 'eh-diag に誤概念が3件以上ぶら下がる');
+  assert.ok(r!.misconceptions.some((m) => m.label.includes('長方形の対角線も垂直')));
+});
+
+test('listApps: 登録済みアプリが引ける', () => {
+  const apps = listApps();
+  assert.equal(apps.length, 1);
+  assert.equal(apps[0]!.app_id, 'suihei');
+  assert.equal(apps[0]!.skill_count, 35);
+});

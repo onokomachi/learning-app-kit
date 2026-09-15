@@ -25,11 +25,19 @@
     "./verify": {
       "types": "./dist/verify/index.d.ts",
       "import": "./dist/verify/index.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "import": "./dist/catalog/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "import": "./dist/sync/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts",
+    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts src/sync/storage.test.ts",
     "check": "npm run build && npm test",
     "prepare": "npm run build"
   },
