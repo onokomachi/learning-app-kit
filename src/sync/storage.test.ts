@@ -20,21 +20,20 @@ test('parseSyncable: persist の形から state を取り出す / 壊れてい�
   assert.equal(parseSyncable(null), null);
 });
 
-test('toRows: mastery と review を1行にまとめる', () => {
-  const rows = toRows('suihei', 'dev-1', {
+test('toRows: mastery と review を1行にまとめる（device_key/app_id は行に入れない）', () => {
+  const rows = toRows({
     mastery: { 'rel-perp': { attempts: 6, corrects: 5, perfectStreak: 2 } },
     review: { 'rel-perp': { box: 2, lastTs: 100, nextDueTs: 200 } },
   });
   assert.equal(rows.length, 1);
   assert.deepEqual(rows[0], {
-    device_key: 'dev-1', app_id: 'suihei', skill_id: 'rel-perp',
-    attempts: 6, corrects: 5, perfect_streak: 2,
+    skill_id: 'rel-perp', attempts: 6, corrects: 5, perfect_streak: 2,
     box: 2, next_due_ts: 200, last_ts: 100,
   });
 });
 
 test('toRows: review が無いスキルでも欠落させず null で送る', () => {
-  const rows = toRows('suihei', 'dev-1', { mastery: { 'rel-para': { attempts: 1, corrects: 0 } } });
+  const rows = toRows({ mastery: { 'rel-para': { attempts: 1, corrects: 0 } } });
   assert.equal(rows[0]!.box, null);
   assert.equal(rows[0]!.perfect_streak, 0);
 });
@@ -52,7 +51,7 @@ test('同期ありでも、読み書きは localStorage に対して即座に効
   const calls: any[] = [];
   (globalThis as any).fetch = async (url: string, init: any) => {
     calls.push({ url, body: JSON.parse(init.body) });
-    return { ok: true, status: 200 } as any;
+    return { ok: true, status: 200, text: async () => '1' } as any;
   };
   let synced: any = null;
   const s = createSyncedStorage({
@@ -68,8 +67,24 @@ test('同期ありでも、読み書きは localStorage に対して即座に効
 
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(calls.length, 1, 'デバウンス後に1回だけ送る');
-  assert.equal(calls[0].body[0].skill_id, 'rel-perp');
+  assert.match(calls[0].url, /\/rest\/v1\/rpc\/sync_skill_state$/, 'テーブルではなくRPCへ送る');
+  assert.equal(calls[0].body.p_app_id, 'suihei');
+  assert.ok(calls[0].body.p_device_key, '端末IDが付く');
+  assert.equal(calls[0].body.p_rows[0].skill_id, 'rel-perp');
   assert.deepEqual(synced, { ok: true, pushed: 1 });
+});
+
+test('サーバが受理した件数を報告する（巻き戻しで弾かれた行は含まれない）', async () => {
+  installLocalStorage();
+  (globalThis as any).fetch = async () => ({ ok: true, status: 200, text: async () => '0' }) as any;
+  let synced: any = null;
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k',
+    debounceMs: 5, onSync: (r) => { synced = r; },
+  });
+  s.setItem('k', JSON.stringify({ state: { mastery: { a: { attempts: 1, corrects: 1 } } } }));
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepEqual(synced, { ok: true, pushed: 0 }, '2件送っても受理0なら pushed は 0');
 });
 
 test('ネットが落ちていても setItem は投げない（学習を止めない）', async () => {

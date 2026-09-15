@@ -11,6 +11,11 @@
  * Phase 1 は push 専用（端末 → サーバー）。サーバーから引き戻す pull は入れていない。
  * 端末をまたいだ引きつぎは、認証を入れる Phase 2 の仕事にする。
  * そうすることで、この段階では競合解決を一切考えなくて済む。
+ *
+ * 送信先はテーブルではなく RPC(sync_skill_state)。テーブルへ直接 upsert すると
+ * PostgreSQL の ON CONFLICT DO UPDATE が RLS 下で SELECT ポリシーを要求してしまい、
+ * それを与えると「児童端末が他人のデータを読めない」保証が壊れるため
+ * （詳細は master-DB: techspecs/learning-record-store-schema）。
  */
 import type { StateStorage } from './state-storage.js';
 import type { SyncConfig, SyncableState } from './types.js';
@@ -18,10 +23,11 @@ import type { SyncConfig, SyncableState } from './types.js';
 export declare const localAdapter: StateStorage;
 /** persist が保存している文字列から、同期対象の部分だけ取り出す。壊れていたら null。 */
 export declare function parseSyncable(raw: string | null): SyncableState | null;
-/** 同期対象の行に変換する。カタログと同じ app_id / skill_id をそのまま使う。 */
-export declare function toRows(appId: string, deviceKey: string, state: SyncableState): {
-    device_key: string;
-    app_id: string;
+/**
+ * 送信する行に変換する。skill_id はカタログと同じ文字列をそのまま使う。
+ * device_key と app_id は RPC の引数で渡すので、各行には含めない。
+ */
+export declare function toRows(state: SyncableState): {
     skill_id: string;
     attempts: number;
     corrects: number;
