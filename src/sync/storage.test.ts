@@ -20,21 +20,20 @@ test('parseSyncable: persist の形から state を取り出す / 壊れてい�
   assert.equal(parseSyncable(null), null);
 });
 
-test('toRows: mastery と review を1行にまとめる', () => {
-  const rows = toRows('suihei', 'dev-1', {
+test('toRows: mastery と review を1行にまとめる（device_key/app_id は行に入れない）', () => {
+  const rows = toRows({
     mastery: { 'rel-perp': { attempts: 6, corrects: 5, perfectStreak: 2 } },
     review: { 'rel-perp': { box: 2, lastTs: 100, nextDueTs: 200 } },
   });
   assert.equal(rows.length, 1);
   assert.deepEqual(rows[0], {
-    device_key: 'dev-1', app_id: 'suihei', skill_id: 'rel-perp',
-    attempts: 6, corrects: 5, perfect_streak: 2,
+    skill_id: 'rel-perp', attempts: 6, corrects: 5, perfect_streak: 2,
     box: 2, next_due_ts: 200, last_ts: 100,
   });
 });
 
 test('toRows: review が無いスキルでも欠落させず null で送る', () => {
-  const rows = toRows('suihei', 'dev-1', { mastery: { 'rel-para': { attempts: 1, corrects: 0 } } });
+  const rows = toRows({ mastery: { 'rel-para': { attempts: 1, corrects: 0 } } });
   assert.equal(rows[0]!.box, null);
   assert.equal(rows[0]!.perfect_streak, 0);
 });
@@ -52,7 +51,7 @@ test('同期ありでも、読み書きは localStorage に対して即座に効
   const calls: any[] = [];
   (globalThis as any).fetch = async (url: string, init: any) => {
     calls.push({ url, body: JSON.parse(init.body) });
-    return { ok: true, status: 200 } as any;
+    return { ok: true, status: 200, text: async () => '1' } as any;
   };
   let synced: any = null;
   const s = createSyncedStorage({
@@ -68,8 +67,24 @@ test('同期ありでも、読み書きは localStorage に対して即座に効
 
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(calls.length, 1, 'デバウンス後に1回だけ送る');
-  assert.equal(calls[0].body[0].skill_id, 'rel-perp');
+  assert.match(calls[0].url, /\/rest\/v1\/rpc\/sync_skill_state$/, 'テーブルではなくRPCへ送る');
+  assert.equal(calls[0].body.p_app_id, 'suihei');
+  assert.ok(calls[0].body.p_device_key, '端末IDが付く');
+  assert.equal(calls[0].body.p_rows[0].skill_id, 'rel-perp');
   assert.deepEqual(synced, { ok: true, pushed: 1 });
+});
+
+test('サーバが受理した件数を報告する（巻き戻しで弾かれた行は含まれない）', async () => {
+  installLocalStorage();
+  (globalThis as any).fetch = async () => ({ ok: true, status: 200, text: async () => '0' }) as any;
+  let synced: any = null;
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k',
+    debounceMs: 5, onSync: (r) => { synced = r; },
+  });
+  s.setItem('k', JSON.stringify({ state: { mastery: { a: { attempts: 1, corrects: 1 } } } }));
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepEqual(synced, { ok: true, pushed: 0 }, '2件送っても受理0なら pushed は 0');
 });
 
 test('ネットが落ちていても setItem は投げない（学習を止めない）', async () => {
@@ -110,9 +125,38 @@ test('誤概念が skillId に結びついている', () => {
   assert.ok(r!.misconceptions.some((m) => m.label.includes('長方形の対角線も垂直')));
 });
 
-test('listApps: 登録済みアプリが引ける', () => {
+test('listApps: 9単元すべてが登録され、学年順にならぶ', () => {
   const apps = listApps();
-  assert.equal(apps.length, 1);
-  assert.equal(apps[0]!.app_id, 'suihei');
-  assert.equal(apps[0]!.skill_count, 35);
+  assert.equal(apps.length, 9);
+  const grades = apps.map((a) => a.grade);
+  assert.deepEqual(grades, [...grades].sort((x, y) => x - y), '学年の昇順');
+  assert.ok(apps.every((a) => a.skill_count > 0), '全単元にスキルがある');
+  assert.ok(apps.every((a) => a.modules.length > 0), '全単元にモジュールがある');
+});
+
+test('skill_count が modules の実数と一致する（生成のとりこぼし検出）', () => {
+  for (const a of listApps()) {
+    const actual = a.modules.reduce((s, m) => s + m.skills.length, 0);
+    assert.equal(actual, a.skill_count, `${a.app_id} の件数が食いちがう`);
+  }
+});
+
+test('app_id と skill_id が全単元で一意（衝突すると別単元の記録が混ざる）', () => {
+  const seen = new Set<string>();
+  for (const a of listApps()) for (const m of a.modules) for (const s of m.skills) {
+    const key = `${a.app_id}/${s.skill_id}`;
+    assert.ok(!seen.has(key), `重複: ${key}`);
+    seen.add(key);
+  }
+});
+
+test('他単元の記号を引いても null（単元をまたいで混ざらない）', () => {
+  assert.equal(lookupSkill('gaisu', 'rel-perp'), null);
+  assert.ok(lookupSkill('suihei', 'rel-perp'));
+});
+
+test('接頭辞つきで記録される単元も正しく引ける（syousu の addsub-）', () => {
+  const r = lookupSkill('syousu', 'addsub-add-basic');
+  assert.ok(r, 'addsub-add-basic が引ける');
+  assert.equal(r!.module_id, 'decimal-addsub');
 });

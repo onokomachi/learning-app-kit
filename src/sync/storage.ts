@@ -11,6 +11,11 @@
  * Phase 1 は push 専用（端末 → サーバー）。サーバーから引き戻す pull は入れていない。
  * 端末をまたいだ引きつぎは、認証を入れる Phase 2 の仕事にする。
  * そうすることで、この段階では競合解決を一切考えなくて済む。
+ *
+ * 送信先はテーブルではなく RPC(sync_skill_state)。テーブルへ直接 upsert すると
+ * PostgreSQL の ON CONFLICT DO UPDATE が RLS 下で SELECT ポリシーを要求してしまい、
+ * それを与えると「児童端末が他人のデータを読めない」保証が壊れるため
+ * （詳細は master-DB: techspecs/learning-record-store-schema）。
  */
 import type { StateStorage } from './state-storage.js';
 import type { SyncConfig, SyncableState } from './types.js';
@@ -54,11 +59,12 @@ export function parseSyncable(raw: string | null): SyncableState | null {
   }
 }
 
-/** 同期対象の行に変換する。カタログと同じ app_id / skill_id をそのまま使う。 */
-export function toRows(appId: string, deviceKey: string, state: SyncableState) {
-  const mastery = Object.entries(state.mastery ?? {}).map(([skillId, m]) => ({
-    device_key: deviceKey,
-    app_id: appId,
+/**
+ * 送信する行に変換する。skill_id はカタログと同じ文字列をそのまま使う。
+ * device_key と app_id は RPC の引数で渡すので、各行には含めない。
+ */
+export function toRows(state: SyncableState) {
+  return Object.entries(state.mastery ?? {}).map(([skillId, m]) => ({
     skill_id: skillId,
     attempts: m.attempts,
     corrects: m.corrects,
@@ -67,7 +73,6 @@ export function toRows(appId: string, deviceKey: string, state: SyncableState) {
     next_due_ts: state.review?.[skillId]?.nextDueTs ?? null,
     last_ts: state.review?.[skillId]?.lastTs ?? null,
   }));
-  return mastery;
 }
 
 /**
@@ -87,20 +92,21 @@ export function createSyncedStorage(config: SyncConfig): StateStorage {
     pending = null;
     const state = parseSyncable(raw);
     if (!state) return;
-    const rows = toRows(appId, getDeviceKey(), state);
+    const rows = toRows(state);
     if (rows.length === 0) return;
     try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/skill_state?on_conflict=device_key,app_id,skill_id`, {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/sync_skill_state`, {
         method: 'POST',
         headers: {
           apikey: supabaseKey,
           Authorization: `Bearer ${supabaseKey}`,
           'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates,return=minimal',
         },
-        body: JSON.stringify(rows),
+        body: JSON.stringify({ p_device_key: getDeviceKey(), p_app_id: appId, p_rows: rows }),
       });
-      onSync?.(res.ok ? { ok: true, pushed: rows.length } : { ok: false, pushed: 0, error: `HTTP ${res.status}` });
+      // 関数は「実際に書き込めた件数」を返す。巻き戻し防止で弾かれた行はここに含まれない
+      const accepted = res.ok ? Number(await res.text()) : 0;
+      onSync?.(res.ok ? { ok: true, pushed: accepted } : { ok: false, pushed: 0, error: `HTTP ${res.status}` });
     } catch (e) {
       // 同期の失敗で学習を止めない。次の書き込みでまた送られる
       onSync?.({ ok: false, pushed: 0, error: (e as Error).message });
