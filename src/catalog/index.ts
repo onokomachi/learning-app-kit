@@ -9,14 +9,22 @@
  */
 import type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
 import { suihei } from './suihei.js';
+import { bai } from './bai.js';
+import { gaisu } from './gaisu.js';
+import { hissan } from './hissan.js';
+import { kakudaizu } from './kakudaizu.js';
+import { karakuri } from './karakuri.js';
+import { kawari } from './kawari.js';
+import { suusei } from './suusei.js';
+import { syousu } from './syousu.js';
 
 export type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
 export type { ModuleEntry, SkillEntry } from './types.js';
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS: Record<string, AppCatalog> = {
-  [suihei.app_id]: suihei,
-};
+export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
+  [suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
+);
 
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
 export function listApps(): AppCatalog[] {

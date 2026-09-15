@@ -125,9 +125,38 @@ test('誤概念が skillId に結びついている', () => {
   assert.ok(r!.misconceptions.some((m) => m.label.includes('長方形の対角線も垂直')));
 });
 
-test('listApps: 登録済みアプリが引ける', () => {
+test('listApps: 9単元すべてが登録され、学年順にならぶ', () => {
   const apps = listApps();
-  assert.equal(apps.length, 1);
-  assert.equal(apps[0]!.app_id, 'suihei');
-  assert.equal(apps[0]!.skill_count, 35);
+  assert.equal(apps.length, 9);
+  const grades = apps.map((a) => a.grade);
+  assert.deepEqual(grades, [...grades].sort((x, y) => x - y), '学年の昇順');
+  assert.ok(apps.every((a) => a.skill_count > 0), '全単元にスキルがある');
+  assert.ok(apps.every((a) => a.modules.length > 0), '全単元にモジュールがある');
+});
+
+test('skill_count が modules の実数と一致する（生成のとりこぼし検出）', () => {
+  for (const a of listApps()) {
+    const actual = a.modules.reduce((s, m) => s + m.skills.length, 0);
+    assert.equal(actual, a.skill_count, `${a.app_id} の件数が食いちがう`);
+  }
+});
+
+test('app_id と skill_id が全単元で一意（衝突すると別単元の記録が混ざる）', () => {
+  const seen = new Set<string>();
+  for (const a of listApps()) for (const m of a.modules) for (const s of m.skills) {
+    const key = `${a.app_id}/${s.skill_id}`;
+    assert.ok(!seen.has(key), `重複: ${key}`);
+    seen.add(key);
+  }
+});
+
+test('他単元の記号を引いても null（単元をまたいで混ざらない）', () => {
+  assert.equal(lookupSkill('gaisu', 'rel-perp'), null);
+  assert.ok(lookupSkill('suihei', 'rel-perp'));
+});
+
+test('接頭辞つきで記録される単元も正しく引ける（syousu の addsub-）', () => {
+  const r = lookupSkill('syousu', 'addsub-add-basic');
+  assert.ok(r, 'addsub-add-basic が引ける');
+  assert.equal(r!.module_id, 'decimal-addsub');
 });
