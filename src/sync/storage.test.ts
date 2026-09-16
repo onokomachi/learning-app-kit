@@ -173,3 +173,41 @@ test('国語アプリも記号を引ける（設問ごと・場面ごと）', ()
   assert.equal(r!.module_title, '場面1');
   assert.match(r!.label, /設問1/);
 });
+
+test('起動時に、すでに端末に溜まっている記録を1回だけ送る', async () => {
+  const map = installLocalStorage();
+  // アプリを繋ぐ前から使っていた子の記録が、端末に残っている状態
+  map.set('suihei_progress_v1', JSON.stringify({
+    version: 2,
+    state: { mastery: { 'rel-perp': { attempts: 40, corrects: 31 } } },
+  }));
+  const calls: any[] = [];
+  (globalThis as any).fetch = async (_u: string, init: any) => {
+    calls.push(JSON.parse(init.body));
+    return { ok: true, status: 200, text: async () => '1' } as any;
+  };
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k', debounceMs: 5,
+  });
+
+  s.getItem('suihei_progress_v1');          // persist の復元で呼ばれる
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls.length, 1, '起動時に1回送る');
+  assert.equal(calls[0].p_rows[0].attempts, 40, '溜まっていた分がそのまま送られる');
+
+  s.getItem('suihei_progress_v1');          // 2回目以降の読み出しでは送らない
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls.length, 1, '読み出すたびには送らない');
+});
+
+test('端末が空なら、起動時には送らない', async () => {
+  installLocalStorage();
+  let called = false;
+  (globalThis as any).fetch = async () => { called = true; return { ok: true } as any; };
+  const s = createSyncedStorage({
+    appId: 'suihei', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k', debounceMs: 5,
+  });
+  s.getItem('suihei_progress_v1');
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(called, false);
+});

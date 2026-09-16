@@ -101,15 +101,35 @@ export function createSyncedStorage(config) {
             onSync?.({ ok: false, pushed: 0, error: e.message });
         }
     };
+    const schedule = (value) => {
+        pending = value;
+        if (timer)
+            clearTimeout(timer);
+        timer = setTimeout(() => void flush(), debounceMs);
+    };
+    let sentOnStartup = false;
     return {
-        getItem: localAdapter.getItem,
         removeItem: localAdapter.removeItem,
+        /**
+         * 読み出しは端末から。そのついでに、起動時の1回だけ、
+         * すでに端末に溜まっている記録を送る。
+         *
+         * これが無いと「アプリを入れる前から使っていた子の記録」は、
+         * その子が次に1問解くまでサーバに届かない。二度と開かなければ永久に届かない。
+         * 送るのは常に全量なので、1回送れば端末の中身がそのまま反映される。
+         */
+        getItem: (name) => {
+            const value = localAdapter.getItem(name);
+            if (!sentOnStartup) {
+                sentOnStartup = true;
+                if (typeof value === 'string' && value)
+                    schedule(value);
+            }
+            return value;
+        },
         setItem: (name, value) => {
             localAdapter.setItem(name, value); // 先に端末へ確実に書く
-            pending = value;
-            if (timer)
-                clearTimeout(timer);
-            timer = setTimeout(() => void flush(), debounceMs);
+            schedule(value);
         },
     };
 }
