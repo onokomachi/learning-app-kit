@@ -37,7 +37,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts src/sync/storage.test.ts src/sync/push.test.ts src/sync/student.test.ts src/sync/handoff.test.ts",
+    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts src/sync/storage.test.ts src/sync/push.test.ts src/sync/student.test.ts src/sync/handoff.test.ts src/sync/pull.test.ts",
     "check": "npm run build && npm test",
     "prepare": "npm run build"
   },
