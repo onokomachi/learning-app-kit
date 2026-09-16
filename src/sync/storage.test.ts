@@ -125,9 +125,9 @@ test('誤概念が skillId に結びついている', () => {
   assert.ok(r!.misconceptions.some((m) => m.label.includes('長方形の対角線も垂直')));
 });
 
-test('listApps: 9単元すべてが登録され、学年順にならぶ', () => {
+test('listApps: 全単元が登録され、学年順にならぶ', () => {
   const apps = listApps();
-  assert.equal(apps.length, 9);
+  assert.ok(apps.length >= 10, `単元数 ${apps.length}`);
   const grades = apps.map((a) => a.grade);
   assert.deepEqual(grades, [...grades].sort((x, y) => x - y), '学年の昇順');
   assert.ok(apps.every((a) => a.skill_count > 0), '全単元にスキルがある');
@@ -159,4 +159,17 @@ test('接頭辞つきで記録される単元も正しく引ける（syousu の 
   const r = lookupSkill('syousu', 'addsub-add-basic');
   assert.ok(r, 'addsub-add-basic が引ける');
   assert.equal(r!.module_id, 'decimal-addsub');
+});
+
+test('算数と国語が同じ仕組みで並ぶ（教科を問わない）', () => {
+  const subjects = new Set(listApps().map((a) => a.subject));
+  assert.ok(subjects.has('算数'), '算数がある');
+  assert.ok(subjects.has('国語'), '国語がある');
+});
+
+test('国語アプリも記号を引ける（設問ごと・場面ごと）', () => {
+  const r = lookupSkill('hitotsunohana', 'q-1');
+  assert.ok(r, 'q-1 が引ける');
+  assert.equal(r!.module_title, '場面1');
+  assert.match(r!.label, /設問1/);
 });

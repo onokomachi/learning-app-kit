@@ -24,4 +24,8 @@ export declare function lookupSkill(appId: string, skillId: string): ResolvedSki
 export declare function skillLabel(appId: string, skillId: string): string;
 /** その誤概念を扱っている skillId の一覧を引く。誤概念別の集計に使う。 */
 export declare function skillsForMisconception(appId: string, code: string): string[];
+/** 教科の一覧（重複なし・登録順）。ダッシュボードの絞り込みに使う。 */
+export declare function listSubjects(): string[];
+/** 学年の一覧（昇順）。 */
+export declare function listGrades(): number[];
 //# sourceMappingURL=index.d.ts.map
