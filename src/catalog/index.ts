@@ -8,6 +8,7 @@
  * バックエンドのテーブルは一切変わらない。
  */
 import type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
+import { hitotsunohana } from './hitotsunohana.js';
 import { suihei } from './suihei.js';
 import { bai } from './bai.js';
 import { gaisu } from './gaisu.js';
@@ -23,7 +24,7 @@ export type { ModuleEntry, SkillEntry } from './types.js';
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
+  [hitotsunohana, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
 );
 
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
@@ -69,4 +70,14 @@ export function skillLabel(appId: string, skillId: string): string {
 /** その誤概念を扱っている skillId の一覧を引く。誤概念別の集計に使う。 */
 export function skillsForMisconception(appId: string, code: string): string[] {
   return CATALOGS[appId]?.misconceptions.find((m) => m.code === code)?.skills ?? [];
+}
+
+/** 教科の一覧（重複なし・登録順）。ダッシュボードの絞り込みに使う。 */
+export function listSubjects(): string[] {
+  return [...new Set(listApps().map((a) => a.subject))];
+}
+
+/** 学年の一覧（昇順）。 */
+export function listGrades(): number[] {
+  return [...new Set(listApps().map((a) => a.grade))].sort((a, b) => a - b);
 }
