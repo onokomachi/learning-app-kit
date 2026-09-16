@@ -2,4 +2,5 @@ export { createSyncedStorage, localAdapter, parseSyncable, toRows } from './stor
 export { getDeviceKey } from './device.js';
 export { pushSkillState, createPusher } from './push.js';
 export { getStudent, clearStudent, resolveStudent } from './student.js';
+export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
 //# sourceMappingURL=index.js.map
