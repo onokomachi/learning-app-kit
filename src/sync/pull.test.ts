@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchMyProgress, dueFromRows, type MySkillRow, fetchMyActivity, streakDays } from './pull.js';
+import { fetchMyProgress, dueFromRows, type MySkillRow, fetchMyActivity, streakDays, totalsBetween } from './pull.js';
 
 const CFG = { supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' };
 const row = (o: Partial<MySkillRow>): MySkillRow => ({
@@ -93,4 +93,37 @@ test('streakDays: 2日以上空いていたら0（連続は切れている）', 
 test('fetchMyActivity: 名乗っていなければ空で返す（エラーにしない）', async () => {
   const r = await fetchMyActivity({ supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' }, null);
   assert.deepEqual(r, { ok: true, rows: [] });
+});
+
+/* ---------- 期間の合計と、問題単位の正答率 ---------- */
+
+const day2 = (d: string, a: number, c: number, m: number) =>
+  ({ event_date: d, app_id: 'gaisu', attempts: a, corrects: c, mistakes: m });
+
+test('totalsBetween: のべ解答数は「取り組んだ回数＋まちがえた回数」', () => {
+  // 10問に取り組み、7問は一発正解、のこりで3回まちがえた → のべ13回答えて7回正解
+  const t = totalsBetween([day2('2026-09-15', 10, 7, 3)], '2026-09-01', '2026-09-30');
+  assert.equal(t.answers, 13);
+  assert.equal(t.rate, 7 / 13);
+});
+
+test('totalsBetween: 範囲の外は数えない（両端は含む）', () => {
+  const rows = [day2('2026-09-14', 5, 5, 0), day2('2026-09-15', 5, 4, 1), day2('2026-09-16', 5, 3, 2)];
+  const t = totalsBetween(rows, '2026-09-15', '2026-09-16');
+  assert.equal(t.attempts, 10);
+  assert.equal(t.corrects, 7);
+  assert.equal(t.mistakes, 3);
+});
+
+test('totalsBetween: 記録が無ければ正答率は null（0%と出さないため）', () => {
+  const t = totalsBetween([], '2026-09-01', '2026-09-30');
+  assert.equal(t.rate, null);
+  assert.equal(t.answers, 0);
+});
+
+test('totalsBetween: mistakes が無い古い記録でも壊れない', () => {
+  const t = totalsBetween([{ event_date: '2026-09-15', app_id: 'gaisu', attempts: 4, corrects: 4 }],
+                          '2026-09-01', '2026-09-30');
+  assert.equal(t.answers, 4);
+  assert.equal(t.rate, 1);
 });
