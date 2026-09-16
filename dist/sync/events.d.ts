@@ -21,6 +21,10 @@ export interface EventRow {
     module_id?: string;
     label?: string;
     correct: boolean;
+    /** その問題で何回まちがえたか。0なら一発正解 */
+    mistakes?: number;
+    /** 正解までたどりつかずに離れたか。true の行が「できなかった問題」 */
+    abandoned?: boolean;
     ts: number;
     /** 本番テストのときだけ。点数と大問ごとの正誤 */
     detail?: unknown;
