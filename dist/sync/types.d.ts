@@ -21,6 +21,10 @@ export interface LogLike {
     correct: boolean;
     /** 画面に出ていた見出し（例「72 ÷ 3」）。何をやったかを人が読むためだけに使う */
     label?: string;
+    /** その問題で何回まちがえたか。0なら一発正解 */
+    mistakes?: number;
+    /** 正解までたどりつかずに離れたか */
+    abandoned?: boolean;
     /** 本番テストのときだけ入る答案（点数と大問ごとの正誤） */
     detail?: unknown;
 }

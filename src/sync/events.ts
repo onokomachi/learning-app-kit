@@ -24,6 +24,10 @@ export interface EventRow {
   module_id?: string;
   label?: string;
   correct: boolean;
+  /** その問題で何回まちがえたか。0なら一発正解 */
+  mistakes?: number;
+  /** 正解までたどりつかずに離れたか。true の行が「できなかった問題」 */
+  abandoned?: boolean;
   ts: number;
   /** 本番テストのときだけ。点数と大問ごとの正誤 */
   detail?: unknown;
@@ -85,6 +89,8 @@ export function toEventRows(logs: readonly LogLike[] | undefined, sinceTs: numbe
       module_id: l.moduleId,
       label: l.label,
       correct: !!l.correct,
+      mistakes: Math.max(0, Number(l.mistakes ?? 0)) || 0,
+      abandoned: !!l.abandoned,
       ts: l.ts,
       ...(l.detail ? { detail: l.detail } : {}),
     });

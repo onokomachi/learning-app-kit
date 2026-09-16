@@ -57,6 +57,8 @@ export function toEventRows(logs, sinceTs) {
             module_id: l.moduleId,
             label: l.label,
             correct: !!l.correct,
+            mistakes: Math.max(0, Number(l.mistakes ?? 0)) || 0,
+            abandoned: !!l.abandoned,
             ts: l.ts,
             ...(l.detail ? { detail: l.detail } : {}),
         });
