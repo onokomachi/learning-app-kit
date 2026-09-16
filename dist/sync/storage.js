@@ -1,4 +1,5 @@
 import { getDeviceKey } from './device.js';
+import { getStudent } from './student.js';
 /** 端末内だけで完結する保存。Supabase を設定していないときはこれだけが動く。 */
 export const localAdapter = {
     getItem: (name) => {
@@ -83,7 +84,13 @@ export function createSyncedStorage(config) {
                     Authorization: `Bearer ${supabaseKey}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ p_device_key: getDeviceKey(), p_app_id: appId, p_rows: rows }),
+                body: JSON.stringify({
+                    p_device_key: getDeviceKey(),
+                    p_app_id: appId,
+                    // 学級コードを入れていなければ null。サーバ側は端末単位で記録する
+                    p_student_id: getStudent()?.studentId ?? null,
+                    p_rows: rows,
+                }),
             });
             // 関数は「実際に書き込めた件数」を返す。巻き戻し防止で弾かれた行はここに含まれない
             const accepted = res.ok ? Number(await res.text()) : 0;

@@ -9,6 +9,7 @@
  */
 import type { SyncConfig } from './types.js';
 import { getDeviceKey } from './device.js';
+import { getStudent } from './student.js';
 
 /** 送信する1スキルぶん。skill_id はカタログと同じ文字列にする。 */
 export interface PushRow {
@@ -56,6 +57,8 @@ export async function pushSkillState(config: PushConfig, rows: PushRow[]): Promi
       body: JSON.stringify({
         p_device_key: getDeviceKey(),
         p_app_id: appId,
+        // 学級コードを入れていなければ null。サーバ側は端末単位で記録する
+        p_student_id: getStudent()?.studentId ?? null,
         p_rows: valid.map((r) => ({
           skill_id: r.skill_id,
           attempts: r.attempts,

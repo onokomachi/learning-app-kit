@@ -1,4 +1,5 @@
 import { getDeviceKey } from './device.js';
+import { getStudent } from './student.js';
 /**
  * 学習記録を学級ポータルへ送る。
  * supabaseUrl / supabaseKey が無ければ何もしない（設定し忘れても壊れない）。
@@ -24,6 +25,8 @@ export async function pushSkillState(config, rows) {
             body: JSON.stringify({
                 p_device_key: getDeviceKey(),
                 p_app_id: appId,
+                // 学級コードを入れていなければ null。サーバ側は端末単位で記録する
+                p_student_id: getStudent()?.studentId ?? null,
                 p_rows: valid.map((r) => ({
                     skill_id: r.skill_id,
                     attempts: r.attempts,
