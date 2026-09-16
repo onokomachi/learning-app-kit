@@ -84,4 +84,49 @@ export declare function fetchMyActivity(config: ResolveConfig, studentId: string
  * 数える対象は「やった日」だけ。正解数は見ない——続けたこと自体を数える。
  */
 export declare function streakDays(rows: readonly MyActivityRow[], today: string): number;
+/** my_skill_totals が返す1行。項目（スキル）ごとの、のべ解答数と正解数。 */
+export interface MySkillTotalRow {
+    app_id: string;
+    skill_id: string;
+    /** のべ解答数 = 取り組んだ回数 + まちがえた回数 */
+    answers: number;
+    corrects: number;
+    mistakes: number;
+    abandoned: number;
+    last_ts: number | null;
+}
+export type MySkillTotalsResult = {
+    ok: true;
+    rows: MySkillTotalRow[];
+} | {
+    ok: false;
+    message: string;
+};
+/**
+ * 項目ごとのできぐあいを取る。
+ *
+ * my_skill_state（到達状況）とは別物。あちらはラウンド単位の累計で、
+ * 「何回まちがえたか」を含まないので項目ごとの正答率が出せない。
+ */
+export declare function fetchMySkillTotals(config: ResolveConfig, studentId: string | null | undefined): Promise<MySkillTotalsResult>;
+/** 1週間ぶんの成績。グラフの1点になる。 */
+export interface WeekPoint {
+    /** その週の始まり（'YYYY-MM-DD'）。月曜はじまり */
+    start: string;
+    /** その週の終わり（'YYYY-MM-DD'） */
+    end: string;
+    answers: number;
+    corrects: number;
+    /** 問題単位の正答率。のべ解答数が足りなければ null（点を打たない） */
+    rate: number | null;
+}
+/** その日を含む週の月曜日（'YYYY-MM-DD'）。日曜は前の週に入れる。 */
+export declare function weekStart(date: string): string;
+/**
+ * 週ごとの推移。直近 weeks 週ぶんを古い順に返す。
+ *
+ * 記録が少ない週は rate を null にする。点が打たれないので、
+ * 「1問だけやって落ちた週」がグラフ上で急落に見えることがない。
+ */
+export declare function weeklyTrend(rows: readonly MyActivityRow[], weeks?: number, today?: string, minAnswers?: number): WeekPoint[];
 //# sourceMappingURL=pull.d.ts.map

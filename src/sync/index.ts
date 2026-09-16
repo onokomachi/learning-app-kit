@@ -9,5 +9,11 @@ export type { StudentIdentity, ResolveConfig, ResolveResult } from './student.js
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
 export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';
 export type { EventRow } from './events.js';
-export { fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween } from './pull.js';
-export type { MySkillRow, MyProgressResult, MyActivityRow, MyActivityResult, ActivityTotals } from './pull.js';
+export {
+  fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween,
+  fetchMySkillTotals, weeklyTrend, weekStart,
+} from './pull.js';
+export type {
+  MySkillRow, MyProgressResult, MyActivityRow, MyActivityResult, ActivityTotals,
+  MySkillTotalRow, MySkillTotalsResult, WeekPoint,
+} from './pull.js';
