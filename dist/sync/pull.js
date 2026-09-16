@@ -99,4 +99,77 @@ export function streakDays(rows, today) {
     }
     return n;
 }
+/**
+ * 項目ごとのできぐあいを取る。
+ *
+ * my_skill_state（到達状況）とは別物。あちらはラウンド単位の累計で、
+ * 「何回まちがえたか」を含まないので項目ごとの正答率が出せない。
+ */
+export async function fetchMySkillTotals(config, studentId) {
+    const { supabaseUrl, supabaseKey } = config;
+    if (!supabaseUrl || !supabaseKey)
+        return { ok: true, rows: [] };
+    if (!studentId)
+        return { ok: true, rows: [] };
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/my_skill_totals`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ p_student_id: studentId }),
+        });
+        if (!res.ok)
+            return { ok: false, message: 'きろくが よみこめませんでした' };
+        return { ok: true, rows: (await res.json()) };
+    }
+    catch {
+        return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
+/** その日を含む週の月曜日（'YYYY-MM-DD'）。日曜は前の週に入れる。 */
+export function weekStart(date) {
+    const d = new Date(`${date}T00:00:00Z`);
+    const dow = d.getUTCDay(); // 0=日曜
+    d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+    return d.toISOString().slice(0, 10);
+}
+/**
+ * 週ごとの推移。直近 weeks 週ぶんを古い順に返す。
+ *
+ * 記録が少ない週は rate を null にする。点が打たれないので、
+ * 「1問だけやって落ちた週」がグラフ上で急落に見えることがない。
+ */
+export function weeklyTrend(rows, weeks = 8, today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10), minAnswers = 10) {
+    const thisMonday = weekStart(today);
+    const starts = [];
+    const d = new Date(`${thisMonday}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 7 * (weeks - 1));
+    for (let i = 0; i < weeks; i++) {
+        starts.push(d.toISOString().slice(0, 10));
+        d.setUTCDate(d.getUTCDate() + 7);
+    }
+    const byWeek = new Map();
+    for (const r of rows) {
+        const k = weekStart(r.event_date);
+        const cur = byWeek.get(k) ?? { answers: 0, corrects: 0 };
+        cur.answers += (Number(r.attempts) || 0) + (Number(r.mistakes ?? 0) || 0);
+        cur.corrects += Number(r.corrects) || 0;
+        byWeek.set(k, cur);
+    }
+    return starts.map((start) => {
+        const e = new Date(`${start}T00:00:00Z`);
+        e.setUTCDate(e.getUTCDate() + 6);
+        const v = byWeek.get(start) ?? { answers: 0, corrects: 0 };
+        return {
+            start,
+            end: e.toISOString().slice(0, 10),
+            answers: v.answers,
+            corrects: v.corrects,
+            rate: v.answers >= minAnswers ? v.corrects / v.answers : null,
+        };
+    });
+}
 //# sourceMappingURL=pull.js.map

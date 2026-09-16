@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchMyProgress, dueFromRows, type MySkillRow, fetchMyActivity, streakDays, totalsBetween } from './pull.js';
+import {
+  fetchMyProgress, dueFromRows, type MySkillRow, fetchMyActivity, streakDays, totalsBetween,
+  fetchMySkillTotals, weeklyTrend, weekStart,
+} from './pull.js';
 
 const CFG = { supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' };
 const row = (o: Partial<MySkillRow>): MySkillRow => ({
@@ -126,4 +129,42 @@ test('totalsBetween: mistakes が無い古い記録でも壊れない', () => {
                           '2026-09-01', '2026-09-30');
   assert.equal(t.answers, 4);
   assert.equal(t.rate, 1);
+});
+
+/* ---------- 週ごとの推移 ---------- */
+
+const act3 = (d: string, att: number, cor: number, mis: number) =>
+  ({ event_date: d, app_id: 'gaisu', attempts: att, corrects: cor, mistakes: mis });
+
+test('weekStart: 月曜はじまりで週を切る（日曜は前の週）', () => {
+  assert.equal(weekStart('2026-09-16'), '2026-09-14', '水曜 → その週の月曜');
+  assert.equal(weekStart('2026-09-14'), '2026-09-14', '月曜 → 自分自身');
+  assert.equal(weekStart('2026-09-20'), '2026-09-14', '日曜 → 前の月曜（週の終わり扱い）');
+  assert.equal(weekStart('2026-09-21'), '2026-09-21', '次の月曜 → 次の週');
+});
+
+test('weeklyTrend: 直近N週を古い順に返す（記録が無い週も枠を残す）', () => {
+  const t = weeklyTrend([act3('2026-09-16', 16, 12, 4)], 4, '2026-09-16');
+  assert.equal(t.length, 4);
+  assert.deepEqual(t.map((w) => w.start), ['2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14']);
+  assert.equal(t[3]!.rate, 12 / 20, 'のべ20回答えて12回正解');
+  assert.equal(t[0]!.rate, null, '記録の無い週は点を打たない');
+});
+
+test('weeklyTrend: 記録が少ない週は rate を出さない（急落に見せない）', () => {
+  // 1問だけやってまちがえた週。0%として点を打つと、グラフ上は大暴落になる
+  const t = weeklyTrend([act3('2026-09-16', 1, 0, 1)], 2, '2026-09-16');
+  assert.equal(t[1]!.answers, 2);
+  assert.equal(t[1]!.rate, null);
+});
+
+test('weeklyTrend: 同じ週の別々の日をまとめる', () => {
+  const t = weeklyTrend([act3('2026-09-14', 5, 4, 1), act3('2026-09-16', 5, 4, 1)], 1, '2026-09-16');
+  assert.equal(t[0]!.answers, 12);
+  assert.equal(t[0]!.corrects, 8);
+});
+
+test('fetchMySkillTotals: 名乗っていなければ空で返す', async () => {
+  const r = await fetchMySkillTotals({ supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' }, null);
+  assert.deepEqual(r, { ok: true, rows: [] });
 });
