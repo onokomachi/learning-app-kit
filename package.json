@@ -1,6 +1,6 @@
 {
   "name": "learning-app-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "単元学習アプリの共通基盤: 間隔反復スケジューラ / 問題ジェネレーターの汎用検証ヘルパー / CIテンプレート",
   "type": "module",
   "license": "MIT",
