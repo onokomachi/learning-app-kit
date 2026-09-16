@@ -173,3 +173,13 @@ test('国語アプリも記号を引ける（設問ごと・場面ごと）', ()
   assert.equal(r!.module_title, '場面1');
   assert.match(r!.label, /設問1/);
 });
+
+test('国語3単元が登録され、それぞれ違う切り口で並ぶ', () => {
+  const kokugo = listApps().filter((a) => a.subject === '国語');
+  assert.equal(kokugo.length, 3);
+  // 物語文・説明文は設問ごと、つなぎ言葉はカテゴリ×難易度
+  assert.ok(lookupSkill('upandloose', 'q-1'), '説明文は設問で引ける');
+  const t = lookupSkill('tsunagi', 'gyakusetsu-normal');
+  assert.ok(t, 'つなぎ言葉はカテゴリ×難易度で引ける');
+  assert.match(t!.module_title, /逆接/);
+});
