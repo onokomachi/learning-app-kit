@@ -9,6 +9,8 @@
  */
 import type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
 import { hitotsunohana } from './hitotsunohana.js';
+import { tsunagi } from './tsunagi.js';
+import { upandloose } from './upandloose.js';
 import { suihei } from './suihei.js';
 import { bai } from './bai.js';
 import { gaisu } from './gaisu.js';
@@ -24,7 +26,7 @@ export type { ModuleEntry, SkillEntry } from './types.js';
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
+  [hitotsunohana, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
 );
 
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
