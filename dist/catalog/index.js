@@ -1,4 +1,6 @@
 import { hitotsunohana } from './hitotsunohana.js';
+import { tsunagi } from './tsunagi.js';
+import { upandloose } from './upandloose.js';
 import { suihei } from './suihei.js';
 import { bai } from './bai.js';
 import { gaisu } from './gaisu.js';
@@ -9,7 +11,7 @@ import { kawari } from './kawari.js';
 import { suusei } from './suusei.js';
 import { syousu } from './syousu.js';
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS = Object.fromEntries([hitotsunohana, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]));
+export const CATALOGS = Object.fromEntries([hitotsunohana, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]));
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
 export function listApps() {
     return Object.values(CATALOGS).sort((a, b) => a.grade - b.grade || a.subject.localeCompare(b.subject) || a.app_id.localeCompare(b.app_id));
