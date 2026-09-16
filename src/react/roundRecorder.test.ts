@@ -79,3 +79,59 @@ test('count: いまの誤答回数を返す', () => {
   rec.mistake(); rec.mistake();
   assert.equal(rec.count(), 2);
 });
+
+/* ---------- 1つの画面で問題を切りかえ続けるとき ---------- */
+
+test('next: できないまま次へ移ったら、前の問題を「やめた」として残す', () => {
+  const got: RoundRecord[] = [];
+  let skill = 's1';
+  const rec = createRoundRecorder(() => ({
+    moduleId: 'eh', skillId: skill, record: (r) => got.push(r), abandonLabel: () => `label-${skill}`,
+  }));
+  rec.mistake();
+  skill = 's2';                     // 画面はもう次の問題を描いている
+  rec.next();
+  assert.equal(got.length, 1);
+  assert.equal(got[0]!.skillId, 's1', 'やめた記録が次の問題のものにならない');
+  assert.equal(got[0]!.label, 'label-s1');
+  assert.equal(got[0]!.abandoned, true);
+});
+
+test('next: 次の問題では数え直す', () => {
+  const got: RoundRecord[] = [];
+  const rec = createRoundRecorder(() => ({ moduleId: 'eh', skillId: 's', record: (r) => got.push(r) }));
+  rec.mistake(); rec.mistake();
+  rec.finish('1問目');
+  rec.next();
+  rec.finish('2問目');
+  assert.equal(got.length, 2);
+  assert.equal(got[0]!.mistakes, 2);
+  assert.equal(got[1]!.mistakes, 0, '前の問題の誤答回数を引きずらない');
+  assert.equal(got[1]!.correct, true);
+});
+
+test('next: できたあとに次へ移っても、やめた記録は増えない', () => {
+  const got: RoundRecord[] = [];
+  const rec = createRoundRecorder(() => ({ moduleId: 'eh', skillId: 's', record: (r) => got.push(r) }));
+  rec.finish('できた');
+  rec.next();
+  rec.next();
+  assert.equal(got.length, 1);
+});
+
+test('next: 1回も答えずに通りすぎた問題は残さない', () => {
+  const got: RoundRecord[] = [];
+  const rec = createRoundRecorder(() => ({ moduleId: 'eh', skillId: 's', record: (r) => got.push(r) }));
+  rec.next(); rec.next(); rec.next();
+  assert.equal(got.length, 0);
+});
+
+test('できたときの記録も、手をつけた時点の問題のものになる', () => {
+  const got: RoundRecord[] = [];
+  let skill = 's1';
+  const rec = createRoundRecorder(() => ({ moduleId: 'm', skillId: skill, record: (r) => got.push(r) }));
+  rec.mistake();
+  skill = 's2';
+  rec.finish('1問目');
+  assert.equal(got[0]!.skillId, 's1');
+});
