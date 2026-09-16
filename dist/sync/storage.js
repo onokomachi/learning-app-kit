@@ -1,4 +1,5 @@
 import { getDeviceKey } from './device.js';
+import { getStudent, subscribeStudent } from './student.js';
 /** 端末内だけで完結する保存。Supabase を設定していないときはこれだけが動く。 */
 export const localAdapter = {
     getItem: (name) => {
@@ -83,7 +84,13 @@ export function createSyncedStorage(config) {
                     Authorization: `Bearer ${supabaseKey}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ p_device_key: getDeviceKey(), p_app_id: appId, p_rows: rows }),
+                body: JSON.stringify({
+                    p_device_key: getDeviceKey(),
+                    p_app_id: appId,
+                    // 学級コードを入れていなければ null。サーバ側は端末単位で記録する
+                    p_student_id: getStudent()?.studentId ?? null,
+                    p_rows: rows,
+                }),
             });
             // 関数は「実際に書き込めた件数」を返す。巻き戻し防止で弾かれた行はここに含まれない
             const accepted = res.ok ? Number(await res.text()) : 0;
@@ -94,15 +101,50 @@ export function createSyncedStorage(config) {
             onSync?.({ ok: false, pushed: 0, error: e.message });
         }
     };
+    /** 直近に端末へ書かれた中身。名乗りが後から決まったときに送り直すために持っておく */
+    let lastValue = null;
+    const schedule = (value) => {
+        lastValue = value;
+        pending = value;
+        if (timer)
+            clearTimeout(timer);
+        timer = setTimeout(() => void flush(), debounceMs);
+    };
+    let sentOnStartup = false;
+    /**
+     * 名乗りが決まったら、すでに送った分をもう一度送る。
+     *
+     * ハブから来た子は「起動 → 記録を送る（誰のものか不明）→ 名乗りが解決する」の順に進む。
+     * 送り直さないと、その子が次に1問解くまで記録は端末のものとして残り、
+     * 一度もやらずに閉じれば先生の画面には永久に出ない。
+     * 送信は常に全量なので、送り直しは重複ではなく上書きになる。
+     */
+    subscribeStudent((s) => {
+        if (s && lastValue)
+            schedule(lastValue);
+    });
     return {
-        getItem: localAdapter.getItem,
         removeItem: localAdapter.removeItem,
+        /**
+         * 読み出しは端末から。そのついでに、起動時の1回だけ、
+         * すでに端末に溜まっている記録を送る。
+         *
+         * これが無いと「アプリを入れる前から使っていた子の記録」は、
+         * その子が次に1問解くまでサーバに届かない。二度と開かなければ永久に届かない。
+         * 送るのは常に全量なので、1回送れば端末の中身がそのまま反映される。
+         */
+        getItem: (name) => {
+            const value = localAdapter.getItem(name);
+            if (!sentOnStartup) {
+                sentOnStartup = true;
+                if (typeof value === 'string' && value)
+                    schedule(value);
+            }
+            return value;
+        },
         setItem: (name, value) => {
             localAdapter.setItem(name, value); // 先に端末へ確実に書く
-            pending = value;
-            if (timer)
-                clearTimeout(timer);
-            timer = setTimeout(() => void flush(), debounceMs);
+            schedule(value);
         },
     };
 }

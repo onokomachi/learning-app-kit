@@ -1,4 +1,5 @@
 import { getDeviceKey } from './device.js';
+import { getStudent, subscribeStudent } from './student.js';
 /**
  * 学習記録を学級ポータルへ送る。
  * supabaseUrl / supabaseKey が無ければ何もしない（設定し忘れても壊れない）。
@@ -24,6 +25,8 @@ export async function pushSkillState(config, rows) {
             body: JSON.stringify({
                 p_device_key: getDeviceKey(),
                 p_app_id: appId,
+                // 学級コードを入れていなければ null。サーバ側は端末単位で記録する
+                p_student_id: getStudent()?.studentId ?? null,
                 p_rows: valid.map((r) => ({
                     skill_id: r.skill_id,
                     attempts: r.attempts,
@@ -50,11 +53,24 @@ export async function pushSkillState(config, rows) {
 export function createPusher(config, wait = 3000) {
     let timer;
     let latest = [];
-    return (rows, onDone) => {
-        latest = rows;
+    let lastOnDone;
+    const schedule = () => {
         if (timer)
             clearTimeout(timer);
-        timer = setTimeout(() => { void pushSkillState(config, latest).then((r) => onDone?.(r)); }, wait);
+        timer = setTimeout(() => { void pushSkillState(config, latest).then((r) => lastOnDone?.(r)); }, wait);
+    };
+    /**
+     * 名乗りが決まったら送り直す（createSyncedStorage と同じ理由）。
+     * ハブから来た子の名乗りはネット越しに解決するので、起動直後の送信には間に合わない。
+     */
+    subscribeStudent((s) => {
+        if (s && latest.length > 0)
+            schedule();
+    });
+    return (rows, onDone) => {
+        latest = rows;
+        lastOnDone = onDone;
+        schedule();
     };
 }
 //# sourceMappingURL=push.js.map
