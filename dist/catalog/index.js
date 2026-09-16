@@ -1,3 +1,4 @@
+import { hitotsunohana } from './hitotsunohana.js';
 import { suihei } from './suihei.js';
 import { bai } from './bai.js';
 import { gaisu } from './gaisu.js';
@@ -8,7 +9,7 @@ import { kawari } from './kawari.js';
 import { suusei } from './suusei.js';
 import { syousu } from './syousu.js';
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS = Object.fromEntries([suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]));
+export const CATALOGS = Object.fromEntries([hitotsunohana, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]));
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
 export function listApps() {
     return Object.values(CATALOGS).sort((a, b) => a.grade - b.grade || a.subject.localeCompare(b.subject) || a.app_id.localeCompare(b.app_id));
@@ -49,5 +50,13 @@ export function skillLabel(appId, skillId) {
 /** その誤概念を扱っている skillId の一覧を引く。誤概念別の集計に使う。 */
 export function skillsForMisconception(appId, code) {
     return CATALOGS[appId]?.misconceptions.find((m) => m.code === code)?.skills ?? [];
+}
+/** 教科の一覧（重複なし・登録順）。ダッシュボードの絞り込みに使う。 */
+export function listSubjects() {
+    return [...new Set(listApps().map((a) => a.subject))];
+}
+/** 学年の一覧（昇順）。 */
+export function listGrades() {
+    return [...new Set(listApps().map((a) => a.grade))].sort((a, b) => a - b);
 }
 //# sourceMappingURL=index.js.map
