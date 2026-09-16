@@ -9,7 +9,7 @@
  */
 import type { SyncConfig } from './types.js';
 import { getDeviceKey } from './device.js';
-import { getStudent } from './student.js';
+import { getStudent, subscribeStudent } from './student.js';
 
 /** 送信する1スキルぶん。skill_id はカタログと同じ文字列にする。 */
 export interface PushRow {
@@ -84,9 +84,24 @@ export async function pushSkillState(config: PushConfig, rows: PushRow[]): Promi
 export function createPusher(config: PushConfig, wait = 3000) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let latest: PushRow[] = [];
+  let lastOnDone: ((r: PushResult) => void) | undefined;
+
+  const schedule = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { void pushSkillState(config, latest).then((r) => lastOnDone?.(r)); }, wait);
+  };
+
+  /**
+   * 名乗りが決まったら送り直す（createSyncedStorage と同じ理由）。
+   * ハブから来た子の名乗りはネット越しに解決するので、起動直後の送信には間に合わない。
+   */
+  subscribeStudent((s) => {
+    if (s && latest.length > 0) schedule();
+  });
+
   return (rows: PushRow[], onDone?: (r: PushResult) => void) => {
     latest = rows;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => { void pushSkillState(config, latest).then((r) => onDone?.(r)); }, wait);
+    lastOnDone = onDone;
+    schedule();
   };
 }

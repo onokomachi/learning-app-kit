@@ -11,6 +11,28 @@
  * 先生が名簿と突き合わせること。
  */
 const KEY = 'lak_student_v1';
+const listeners = new Set();
+/**
+ * 名乗りが決まった（または消えた）ときに呼ばれる。
+ *
+ * これが要るのは、ハブから来た子の「今まで端末に溜まっていた記録」を
+ * 取りこぼさないため。起動直後の送信はすぐ走るのに対し、名乗りの解決は
+ * ネット越しなので必ずそれより遅く終わる。購読していないと、その1回の送信は
+ * student_id が null のまま届き、その子が次に1問解くまで誰のものか付かない。
+ */
+export function subscribeStudent(cb) {
+    listeners.add(cb);
+    return () => { listeners.delete(cb); };
+}
+function notifyStudent(s) {
+    // 購読側が投げても他の購読者と学習そのものを巻き添えにしない
+    for (const cb of [...listeners]) {
+        try {
+            cb(s);
+        }
+        catch { /* noop */ }
+    }
+}
 /** 覚えている児童情報。まだ入力していなければ null。 */
 export function getStudent() {
     try {
@@ -31,6 +53,7 @@ export function clearStudent() {
         localStorage.removeItem(KEY);
     }
     catch { /* 消せなくても動く */ }
+    notifyStudent(null);
 }
 /**
  * 学級コードと出席番号から児童IDを受け取り、端末に覚えさせる。
@@ -73,6 +96,7 @@ export async function resolveStudent(config, joinCode, number) {
             localStorage.setItem(KEY, JSON.stringify(student));
         }
         catch { /* 覚えられなくても今回は使える */ }
+        notifyStudent(student);
         return { ok: true, student };
     }
     catch {

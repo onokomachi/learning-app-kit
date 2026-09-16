@@ -6,6 +6,16 @@ export interface StudentIdentity {
     /** 出席番号。画面に「12番さん」と出すためだけに使う */
     number: number;
 }
+type StudentListener = (s: StudentIdentity | null) => void;
+/**
+ * 名乗りが決まった（または消えた）ときに呼ばれる。
+ *
+ * これが要るのは、ハブから来た子の「今まで端末に溜まっていた記録」を
+ * 取りこぼさないため。起動直後の送信はすぐ走るのに対し、名乗りの解決は
+ * ネット越しなので必ずそれより遅く終わる。購読していないと、その1回の送信は
+ * student_id が null のまま届き、その子が次に1問解くまで誰のものか付かない。
+ */
+export declare function subscribeStudent(cb: StudentListener): () => void;
 /** 覚えている児童情報。まだ入力していなければ null。 */
 export declare function getStudent(): StudentIdentity | null;
 export declare function clearStudent(): void;
@@ -27,4 +37,5 @@ export type ResolveResult = {
  * エラーはそのまま子どもに見せられる日本語で返す。
  */
 export declare function resolveStudent(config: ResolveConfig, joinCode: string, number: number): Promise<ResolveResult>;
+export {};
 //# sourceMappingURL=student.d.ts.map

@@ -1,5 +1,5 @@
 import { getDeviceKey } from './device.js';
-import { getStudent } from './student.js';
+import { getStudent, subscribeStudent } from './student.js';
 /** 端末内だけで完結する保存。Supabase を設定していないときはこれだけが動く。 */
 export const localAdapter = {
     getItem: (name) => {
@@ -101,13 +101,28 @@ export function createSyncedStorage(config) {
             onSync?.({ ok: false, pushed: 0, error: e.message });
         }
     };
+    /** 直近に端末へ書かれた中身。名乗りが後から決まったときに送り直すために持っておく */
+    let lastValue = null;
     const schedule = (value) => {
+        lastValue = value;
         pending = value;
         if (timer)
             clearTimeout(timer);
         timer = setTimeout(() => void flush(), debounceMs);
     };
     let sentOnStartup = false;
+    /**
+     * 名乗りが決まったら、すでに送った分をもう一度送る。
+     *
+     * ハブから来た子は「起動 → 記録を送る（誰のものか不明）→ 名乗りが解決する」の順に進む。
+     * 送り直さないと、その子が次に1問解くまで記録は端末のものとして残り、
+     * 一度もやらずに閉じれば先生の画面には永久に出ない。
+     * 送信は常に全量なので、送り直しは重複ではなく上書きになる。
+     */
+    subscribeStudent((s) => {
+        if (s && lastValue)
+            schedule(lastValue);
+    });
     return {
         removeItem: localAdapter.removeItem,
         /**
