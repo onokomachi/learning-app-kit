@@ -20,8 +20,8 @@
  * Reactを動かさずにテストできる。
  */
 /** アプリのストアに渡す1件。アプリ側の ResultRecord から id と ts を除いた形にそろえる。 */
-export interface RoundRecord {
-    moduleId: string;
+export interface RoundRecord<M extends string = string, D = unknown> {
+    moduleId: M;
     skillId: string;
     label: string;
     correct: boolean;
@@ -30,13 +30,18 @@ export interface RoundRecord {
     /** 正解までたどりつかずに離れたか */
     abandoned?: boolean;
     /** 本番テストの答案など、アプリ固有の追加情報 */
-    detail?: unknown;
+    detail?: D;
 }
-export interface RoundRecorderOptions {
-    moduleId: string;
+/**
+ * アプリごとに ModuleId の型も detail の型も違うので、そこは型引数で受ける。
+ * こうしておくと `record` にアプリのストアの関数をそのまま渡せて、
+ * モジュール名のtypoも型で止まる。
+ */
+export interface RoundRecorderOptions<M extends string = string, D = unknown> {
+    moduleId: M;
     skillId: string;
     /** アプリのストアの記録関数。useProgressStore(s => s.recordResult) をそのまま渡す */
-    record: (rec: RoundRecord) => void;
+    record: (rec: RoundRecord<M, D>) => void;
     /** とちゅうでやめたときに残すラベル。問題文が分かっていれば渡す */
     abandonLabel?: () => string;
     /**
@@ -45,12 +50,12 @@ export interface RoundRecorderOptions {
      */
     recordUntouched?: boolean;
 }
-export interface RoundRecorder {
+export interface RoundRecorder<D = unknown> {
     /** まちがえたときに呼ぶ */
     mistake: () => void;
     /** できたときに呼ぶ。以後は何度呼んでも、離れても、二重に記録されない */
     finish: (label: string, extra?: {
-        detail?: unknown;
+        detail?: D;
     }) => void;
     /** 画面を離れるときに呼ぶ。できていなければ「とちゅうでやめた」として1件残す */
     leave: () => void;
@@ -58,5 +63,5 @@ export interface RoundRecorder {
     count: () => number;
 }
 /** React を使わない本体。テストはこちらを直接ためす。 */
-export declare function createRoundRecorder(getOptions: () => RoundRecorderOptions): RoundRecorder;
+export declare function createRoundRecorder<M extends string = string, D = unknown>(getOptions: () => RoundRecorderOptions<M, D>): RoundRecorder<D>;
 //# sourceMappingURL=roundRecorder.d.ts.map
