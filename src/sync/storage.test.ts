@@ -221,3 +221,47 @@ test('国語3単元が登録され、それぞれ違う切り口で並ぶ', () =
   assert.ok(t, 'つなぎ言葉はカテゴリ×難易度で引ける');
   assert.match(t!.module_title, /逆接/);
 });
+
+/* ---------- 出来事の送信（アプリ側は無改修で届く） ---------- */
+
+test('保存のたびに、到達状況と一緒に「いつ何をやったか」も送る', async () => {
+  installLocalStorage();
+  const calls: any[] = [];
+  (globalThis as any).fetch = async (url: string, init: any) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return { ok: true, status: 200, text: async () => '1' } as any;
+  };
+  const s = createSyncedStorage({
+    appId: 'ev-storage', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k', debounceMs: 5,
+  });
+  s.setItem('k', JSON.stringify({
+    state: {
+      mastery: { 'meaning-man': { attempts: 2, corrects: 1 } },
+      logs: [{ id: 'L1', ts: 1700, skillId: 'meaning-man', moduleId: 'meaning', correct: true, label: '約何万で' }],
+    },
+  }));
+  await new Promise((r) => setTimeout(r, 30));
+
+  const state = calls.filter((c) => c.url.endsWith('/sync_skill_state') && c.body.p_app_id === 'ev-storage');
+  const events = calls.filter((c) => c.url.endsWith('/sync_events') && c.body.p_app_id === 'ev-storage');
+  assert.equal(state.length, 1, '到達状況は今までどおり送る');
+  assert.equal(events.length, 1, '出来事も送る');
+  assert.equal(events[0].body.p_events[0].event_id, 'L1');
+  assert.equal(events[0].body.p_events[0].label, '約何万で');
+});
+
+test('logs が無いアプリでも壊れない（出来事は送らないだけ）', async () => {
+  installLocalStorage();
+  const calls: any[] = [];
+  (globalThis as any).fetch = async (url: string, init: any) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return { ok: true, status: 200, text: async () => '1' } as any;
+  };
+  const s = createSyncedStorage({
+    appId: 'no-logs', supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k', debounceMs: 5,
+  });
+  s.setItem('k', JSON.stringify({ state: { mastery: { a: { attempts: 1, corrects: 1 } } } }));
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls.filter((c) => c.url.endsWith('/sync_events') && c.body.p_app_id === 'no-logs').length, 0);
+  assert.equal(calls.filter((c) => c.url.endsWith('/sync_skill_state') && c.body.p_app_id === 'no-logs').length, 1);
+});

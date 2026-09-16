@@ -13,10 +13,20 @@ export type { MasteryLike };
 export type ReviewLike = ReviewState;
 
 export interface LogLike {
+  /**
+   * アプリが1件ごとに振っている一意ID。サーバはこれで重複を弾くので、
+   * 同じ出来事を何度送っても増えない。
+   * 古いアプリで入っていない場合は ts と skillId から作る。
+   */
+  id?: string;
   ts: number;
   skillId: string;
   moduleId: string;
   correct: boolean;
+  /** 画面に出ていた見出し（例「72 ÷ 3」）。何をやったかを人が読むためだけに使う */
+  label?: string;
+  /** 本番テストのときだけ入る答案（点数と大問ごとの正誤） */
+  detail?: unknown;
 }
 
 /** zustand persist が保存している中身のうち、同期対象の部分。 */

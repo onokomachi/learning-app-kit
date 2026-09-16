@@ -21,6 +21,7 @@ import type { StateStorage } from './state-storage.js';
 import type { SyncConfig, SyncableState } from './types.js';
 import { getDeviceKey } from './device.js';
 import { getStudent, subscribeStudent } from './student.js';
+import { flushEvents, clearSentMark } from './events.js';
 
 /** 端末内だけで完結する保存。Supabase を設定していないときはこれだけが動く。 */
 export const localAdapter: StateStorage = {
@@ -93,6 +94,10 @@ export function createSyncedStorage(config: SyncConfig): StateStorage {
     pending = null;
     const state = parseSyncable(raw);
     if (!state) return;
+    // 出来事（1問ごとの記録）は到達状況とは別に送る。
+    // 片方が失敗しても、もう片方は届く。
+    void flushEvents({ appId, supabaseUrl, supabaseKey }, state.logs);
+
     const rows = toRows(state);
     if (rows.length === 0) return;
     try {
@@ -141,7 +146,12 @@ export function createSyncedStorage(config: SyncConfig): StateStorage {
    * 送信は常に全量なので、送り直しは重複ではなく上書きになる。
    */
   subscribeStudent((s) => {
-    if (s && lastValue) schedule(lastValue);
+    if (!s) return;
+    // 送信済みの印を消して、出来事も全部送り直す。
+    // サーバは重複を弾いたうえで「誰のものか」を付け直すので、
+    // 名乗る前に溜めた分も、あとから正しくその子のものになる。
+    clearSentMark(appId);
+    if (lastValue) schedule(lastValue);
   });
 
   return {
