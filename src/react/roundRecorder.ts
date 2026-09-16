@@ -60,6 +60,14 @@ export interface RoundRecorder<D = unknown> {
   finish: (label: string, extra?: { detail?: D }) => void;
   /** 画面を離れるときに呼ぶ。できていなければ「とちゅうでやめた」として1件残す */
   leave: () => void;
+  /**
+   * 次の問題へ移るときに呼ぶ。
+   *
+   * 1つの画面で問題を切りかえ続けるモジュール（エラーハンターなど）のためのもの。
+   * まだできていなければ「とちゅうでやめた」として1件残してから、数え直す。
+   * 画面ごと作り直される作りのモジュールでは要らない（アンマウントで leave が走る）。
+   */
+  next: () => void;
   /** いまの誤答回数 */
   count: () => number;
 }
@@ -72,13 +80,51 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
   let done = false;
   let touched = false;
 
+  /**
+   * その問題に手をつけた時点の設定を覚えておく。
+   *
+   * 1つの画面で問題を切りかえ続けるモジュールでは、次の問題が描かれたあとに
+   * 「前の問題をやめた」ことが分かる。そのとき現在の設定を使うと、
+   * **やめた記録が次の問題のものとして残ってしまう**。
+   */
+  let opened: RoundRecorderOptions<M, D> | null = null;
+  /**
+   * ラベルは**関数ではなく値で**控える。
+   * abandonLabel をあとから呼ぶと、そのときの問題の文言を返してしまい、
+   * やめた記録に次の問題の見出しが入る（テストで実際に踏んだ）。
+   */
+  let openedLabel = '';
+
+  const close = () => {
+    if (done) return;
+    done = true;
+    const o = opened ?? getOptions();
+    if (!touched && !o.recordUntouched) return;
+    o.record({
+      moduleId: o.moduleId,
+      skillId: o.skillId,
+      label: opened ? openedLabel : (o.abandonLabel?.() ?? ''),
+      correct: false,
+      mistakes,
+      abandoned: true,
+    });
+  };
+
   return {
-    mistake: () => { mistakes += 1; touched = true; },
+    mistake: () => {
+      if (!touched) {
+        // 手をつけた時点の問題を覚える。ラベルは値にして控える
+        opened = getOptions();
+        openedLabel = opened.abandonLabel?.() ?? '';
+      }
+      mistakes += 1;
+      touched = true;
+    },
 
     finish: (label, extra) => {
       if (done) return;
       done = true;
-      const o = getOptions();
+      const o = opened ?? getOptions();
       o.record({
         moduleId: o.moduleId,
         skillId: o.skillId,
@@ -89,19 +135,15 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
       });
     },
 
-    leave: () => {
-      if (done) return;
-      done = true;                 // 離れたあとに二重で走らせない
-      const o = getOptions();
-      if (!touched && !o.recordUntouched) return;
-      o.record({
-        moduleId: o.moduleId,
-        skillId: o.skillId,
-        label: o.abandonLabel?.() ?? '',
-        correct: false,
-        mistakes,
-        abandoned: true,
-      });
+    leave: close,
+
+    next: () => {
+      close();
+      mistakes = 0;
+      done = false;
+      touched = false;
+      opened = null;
+      openedLabel = '';
     },
 
     count: () => mistakes,
