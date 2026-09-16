@@ -33,6 +33,19 @@ export function dueFromRows(rows, now = Date.now()) {
         .filter((r) => r.next_due_ts != null && r.next_due_ts <= now)
         .sort((a, b) => (a.next_due_ts ?? 0) - (b.next_due_ts ?? 0));
 }
+/** 日付の範囲を決めて合計する。from/to は 'YYYY-MM-DD'（両端を含む）。 */
+export function totalsBetween(rows, from, to) {
+    let attempts = 0, corrects = 0, mistakes = 0;
+    for (const r of rows) {
+        if (r.event_date < from || r.event_date > to)
+            continue;
+        attempts += Number(r.attempts) || 0;
+        corrects += Number(r.corrects) || 0;
+        mistakes += Number(r.mistakes ?? 0) || 0;
+    }
+    const answers = attempts + mistakes;
+    return { attempts, corrects, mistakes, answers, rate: answers > 0 ? corrects / answers : null };
+}
 /**
  * 自分がやった日を取る。子ども用ハブの「がんばった記録」に使う。
  *

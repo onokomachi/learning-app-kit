@@ -59,12 +59,52 @@ export function dueFromRows(rows: readonly MySkillRow[], now = Date.now()): MySk
     .sort((a, b) => (a.next_due_ts ?? 0) - (b.next_due_ts ?? 0));
 }
 
-/** my_activity が返す1行。「その日に何回やって、何回できたか」だけ。 */
+/**
+ * my_activity が返す1行。
+ *
+ * 正答率そのものは返ってこない。返るのは回数までで、割り算は画面側でやる。
+ * 「先週の自分」と比べるのに要るものだけを渡し、
+ * 他人と比べられる数（順位・学級平均）はここから出せないようにしてある。
+ */
 export interface MyActivityRow {
   event_date: string;
   app_id: string;
+  /** その日に取り組んだ問題の数 */
+  attempts: number;
+  /** そのうち一発でできた数 */
+  corrects: number;
+  /** まちがえた回数（1つの問題で何度もまちがえれば、その数だけ増える） */
+  mistakes?: number;
+  /** 正解までたどりつかずに離れた数 */
+  abandoned?: number;
+}
+
+/** 期間内の合計。正答率はここで初めて割り算する。 */
+export interface ActivityTotals {
   attempts: number;
   corrects: number;
+  mistakes: number;
+  /** のべ解答数 = 取り組んだ回数 + まちがえた回数 */
+  answers: number;
+  /** 問題単位の正答率。のべ解答数が0なら null（0%と表示しないため） */
+  rate: number | null;
+}
+
+/** 日付の範囲を決めて合計する。from/to は 'YYYY-MM-DD'（両端を含む）。 */
+export function totalsBetween(
+  rows: readonly MyActivityRow[],
+  from: string,
+  to: string,
+): ActivityTotals {
+  let attempts = 0, corrects = 0, mistakes = 0;
+  for (const r of rows) {
+    if (r.event_date < from || r.event_date > to) continue;
+    attempts += Number(r.attempts) || 0;
+    corrects += Number(r.corrects) || 0;
+    mistakes += Number(r.mistakes ?? 0) || 0;
+  }
+  const answers = attempts + mistakes;
+  return { attempts, corrects, mistakes, answers, rate: answers > 0 ? corrects / answers : null };
 }
 
 export type MyActivityResult =
