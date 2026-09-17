@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   fetchMyProgress, dueFromRows, type MySkillRow, fetchMyActivity, streakDays, totalsBetween,
   fetchMySkillTotals, weeklyTrend, weekStart,
+  fetchMyTests, testTrend, testModes, type MyTestRow,
 } from './pull.js';
 
 const CFG = { supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' };
@@ -167,4 +168,54 @@ test('weeklyTrend: 同じ週の別々の日をまとめる', () => {
 test('fetchMySkillTotals: 名乗っていなければ空で返す', async () => {
   const r = await fetchMySkillTotals({ supabaseUrl: 'https://x.supabase.co', supabaseKey: 'k' }, null);
   assert.deepEqual(r, { ok: true, rows: [] });
+});
+
+/* ---------- 本番テストの結果 ---------- */
+
+const testRow = (over: Partial<MyTestRow> = {}): MyTestRow => ({
+  app_id: 'hissan', taken_date: '2026-09-01', mode: '表',
+  total: 80, total_max: 100, omote_score: 80, omote_max: 100,
+  ura_score: null, ura_max: null, event_id: 'e1', ...over,
+});
+
+test('testTrend: 同じ面のテストだけを、古い順に並べる', () => {
+  const rows = [
+    testRow({ event_id: 'c', taken_date: '2026-09-10', total: 92 }),
+    testRow({ event_id: 'b', taken_date: '2026-09-05', total: 75 }),
+    testRow({ event_id: 'u', taken_date: '2026-09-07', mode: '裏', total: 45, total_max: 50 }),
+  ];
+  const t = testTrend(rows, '表');
+  assert.deepEqual(t.map((p) => p.date), ['2026-09-05', '2026-09-10']);
+  assert.deepEqual(t.map((p) => p.score), [75, 92]);
+  assert.ok(!t.some((p) => p.max === 50), '満点のちがう回を同じ線に混ぜない');
+});
+
+test('testTrend: 満点を100としたときの位置も持つ（縦軸に使う）', () => {
+  const t = testTrend([testRow({ total: 45, total_max: 50, mode: '裏' })], '裏');
+  assert.equal(t[0]!.ratio, 0.9);
+});
+
+test('testTrend: 点の入っていない回は落とす（0点として描かない）', () => {
+  const t = testTrend([testRow({ total: null }), testRow({ event_id: 'ok', total: 60 })], '表');
+  assert.equal(t.length, 1);
+  assert.equal(t[0]!.score, 60);
+});
+
+test('testModes: 受けた範囲を、多い順に数える', () => {
+  const rows = [
+    testRow(), testRow({ event_id: '2' }),
+    testRow({ event_id: '3', mode: '裏', total_max: 50 }),
+  ];
+  assert.deepEqual(testModes(rows), [
+    { mode: '表', count: 2, max: 100 },
+    { mode: '裏', count: 1, max: 50 },
+  ]);
+});
+
+test('fetchMyTests: 名乗っていなければ何も送らない', async () => {
+  let called = false;
+  (globalThis as any).fetch = async () => { called = true; return { ok: true } as any; };
+  const r = await fetchMyTests({ supabaseUrl: 'https://x.co', supabaseKey: 'k' }, null);
+  assert.deepEqual(r, { ok: true, rows: [] });
+  assert.equal(called, false);
 });
