@@ -172,4 +172,69 @@ export function weeklyTrend(rows, weeks = 8, today = new Date(Date.now() + 9 * 3
         };
     });
 }
+/**
+ * 自分のテスト結果を新しい順に読む。
+ *
+ * **サーバは他人の点数を1件も返さない。** 学級平均を返してしまえば、
+ * 画面がそれを出さない約束をしていても、いつか誰かが出す。
+ * 比べる相手を過去の自分だけにする約束は、データ層で守る。
+ */
+export async function fetchMyTests(config, studentId, limit = 30) {
+    const { supabaseUrl, supabaseKey } = config;
+    if (!supabaseUrl || !supabaseKey)
+        return { ok: true, rows: [] };
+    if (!studentId)
+        return { ok: true, rows: [] };
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/my_test_results`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ p_student_id: studentId, p_limit: limit }),
+        });
+        if (!res.ok)
+            return { ok: false, message: 'テストのきろくが よみこめませんでした' };
+        return { ok: true, rows: (await res.json()) };
+    }
+    catch {
+        return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
+/**
+ * 同じ面（表／裏／ぜんぶ）のテストだけを、古い順に並べる。
+ *
+ * 混ぜてはいけない。表100点満点の82点と、裏50点満点の45点を同じ線に乗せると、
+ * 下がったように見える。満点のちがう回を1本のグラフにしない。
+ */
+export function testTrend(rows, mode) {
+    const picked = mode ? rows.filter((r) => r.mode === mode) : rows;
+    return picked
+        .filter((r) => r.total != null && r.total_max != null && (r.total_max ?? 0) > 0)
+        .map((r) => ({
+        date: r.taken_date,
+        score: Number(r.total),
+        max: Number(r.total_max),
+        ratio: Number(r.total) / Number(r.total_max),
+    }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+/** どの範囲のテストを何回受けたか。グラフに出す範囲を選ぶのに使う。 */
+export function testModes(rows) {
+    const m = new Map();
+    for (const r of rows) {
+        if (r.total == null || !r.total_max)
+            continue;
+        const key = r.mode ?? '';
+        const cur = m.get(key) ?? { count: 0, max: 0 };
+        cur.count += 1;
+        cur.max = Math.max(cur.max, Number(r.total_max));
+        m.set(key, cur);
+    }
+    return [...m.entries()]
+        .map(([mode, v]) => ({ mode, ...v }))
+        .sort((a, b) => b.count - a.count);
+}
 //# sourceMappingURL=pull.js.map

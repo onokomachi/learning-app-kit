@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getStudent, clearStudent, resolveStudent } from './student.js';
+import {
+  getStudent, clearStudent, resolveStudent, getJoinChoice, chooseAnonymous, claimDevice,
+} from './student.js';
 import { pushSkillState, createPusher } from './push.js';
 import { createSyncedStorage } from './storage.js';
 
@@ -178,4 +180,62 @@ test('名乗る前は購読していても何も起きない（送るものが�
   await resolveStudent(CFG, '4-2', 12);
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(calls.filter((c) => c.body.p_app_id === 'never-pushed').length, 0);
+});
+
+/* ---------- 名乗るか、名乗らずに使うか ---------- */
+
+test('決めるまでは null。コードなしを選ぶと二度と聞かない', () => {
+  stubLS();
+  assert.equal(getJoinChoice(), null, 'まだ決めていない');
+  chooseAnonymous();
+  assert.equal(getJoinChoice(), 'anonymous', '断った子に毎回は出さない');
+});
+
+test('名乗れたら choice は named になる', async () => {
+  stubLS();
+  (globalThis as any).fetch = async (url: string) =>
+    url.endsWith('/resolve_student')
+      ? ({ ok: true, json: async () => 'stu-1' } as any)
+      : ({ ok: true, json: async () => ({ events: 0, tests: 0, skills: 0 }) } as any);
+  await resolveStudent(CFG, '2643', 12);
+  assert.equal(getJoinChoice(), 'named');
+});
+
+test('名乗りを消すと、また聞かれる状態に戻る', async () => {
+  stubLS();
+  (globalThis as any).fetch = async () => ({ ok: true, json: async () => 'stu-1' } as any);
+  await resolveStudent(CFG, '2643', 12);
+  clearStudent();
+  assert.equal(getJoinChoice(), null, '消したのに「決めた」が残っていると、二度と入力できない');
+});
+
+test('claimDevice: 端末と児童IDを送り、拾えた件数を返す', async () => {
+  stubLS();
+  let sent: any = null;
+  (globalThis as any).fetch = async (url: string, init: any) => {
+    sent = { url, body: JSON.parse(init.body) };
+    return { ok: true, json: async () => ({ events: 7846, tests: 31, skills: 741 }) } as any;
+  };
+  const r = await claimDevice(CFG, 'stu-9');
+  assert.equal(r.ok, true);
+  assert.deepEqual([r.events, r.tests, r.skills], [7846, 31, 741]);
+  assert.ok(sent.url.endsWith('/rpc/claim_device'));
+  assert.equal(sent.body.p_student_id, 'stu-9');
+  assert.ok(typeof sent.body.p_device_key === 'string' && sent.body.p_device_key.length > 0);
+});
+
+test('claimDevice: 失敗しても学習を止めない（例外を投げず0件で返す）', async () => {
+  stubLS();
+  (globalThis as any).fetch = async () => { throw new Error('offline'); };
+  const r = await claimDevice(CFG, 'stu-9');
+  assert.deepEqual(r, { ok: false, events: 0, tests: 0, skills: 0 });
+});
+
+test('名乗っていなければ、claimDevice は何も送らない', async () => {
+  stubLS();
+  let called = false;
+  (globalThis as any).fetch = async () => { called = true; return { ok: true } as any; };
+  const r = await claimDevice(CFG);
+  assert.equal(r.ok, false);
+  assert.equal(called, false);
 });

@@ -10,7 +10,41 @@
  * なりすまし（他人の番号を入れる）は防げないので、評価の根拠に使うときは
  * 先生が名簿と突き合わせること。
  */
+import { getDeviceKey } from './device.js';
 const KEY = 'lak_student_v1';
+/**
+ * 「名乗るか、名乗らずに使うか」をもう決めたか。
+ *
+ * これが無いと、コードを入れずに使うと決めた子に、開くたびに同じ画面が出る。
+ * 学級コードを持っていない子（他の学級・家庭で使っている子）にとっては、
+ * 毎回断らされる画面になる。
+ */
+const CHOICE_KEY = 'lak_join_choice_v1';
+/** まだ決めていなければ null。 */
+export function getJoinChoice() {
+    try {
+        const v = localStorage.getItem(CHOICE_KEY);
+        return v === 'named' || v === 'anonymous' ? v : null;
+    }
+    catch {
+        return null;
+    }
+}
+function setJoinChoice(v) {
+    try {
+        localStorage.setItem(CHOICE_KEY, v);
+    }
+    catch { /* 覚えられなくても動く */ }
+}
+/**
+ * コードを入れずに使う、と決める。
+ * 記録は端末の中だけに残り、サーバへは匿名のまま届く（誰のものにもならない）。
+ * あとから設定で名乗れば、それまでの分もその子のものになる。
+ */
+export function chooseAnonymous() {
+    setJoinChoice('anonymous');
+    notifyStudent(getStudent());
+}
 const listeners = new Set();
 /**
  * 名乗りが決まった（または消えた）ときに呼ばれる。
@@ -53,6 +87,10 @@ export function clearStudent() {
         localStorage.removeItem(KEY);
     }
     catch { /* 消せなくても動く */ }
+    try {
+        localStorage.removeItem(CHOICE_KEY);
+    }
+    catch { /* 同上 */ }
     notifyStudent(null);
 }
 /**
@@ -96,11 +134,53 @@ export async function resolveStudent(config, joinCode, number) {
             localStorage.setItem(KEY, JSON.stringify(student));
         }
         catch { /* 覚えられなくても今回は使える */ }
+        setJoinChoice('named');
         notifyStudent(student);
         return { ok: true, student };
     }
     catch {
         return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
+/**
+ * この端末がそれまで匿名で送っていた記録を、名乗った子のものにする。
+ *
+ * 端末に残っているログは直近200件までなので、送り直しだけでは
+ * それより前の記録を拾えない。サーバ側で device_key を手がかりに付け替える。
+ *
+ * **すでに誰かのものになっている行は動かさない**（サーバ側でそう書いてある）。
+ * 同じ端末を別の子が使っても、前の子の記録を奪うことはない。
+ *
+ * 失敗しても学習は止めない。次に名乗り直したときにまた拾える。
+ */
+export async function claimDevice(config, studentId) {
+    const { supabaseUrl, supabaseKey } = config;
+    const id = studentId ?? getStudent()?.studentId;
+    const none = { ok: false, events: 0, tests: 0, skills: 0 };
+    if (!supabaseUrl || !supabaseKey || !id)
+        return none;
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/claim_device`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ p_device_key: getDeviceKey(), p_student_id: id }),
+        });
+        if (!res.ok)
+            return none;
+        const body = (await res.json());
+        return {
+            ok: true,
+            events: Number(body?.events ?? 0),
+            tests: Number(body?.tests ?? 0),
+            skills: Number(body?.skills ?? 0),
+        };
+    }
+    catch {
+        return none;
     }
 }
 //# sourceMappingURL=student.js.map

@@ -1,3 +1,12 @@
+export type JoinChoice = 'named' | 'anonymous' | null;
+/** まだ決めていなければ null。 */
+export declare function getJoinChoice(): JoinChoice;
+/**
+ * コードを入れずに使う、と決める。
+ * 記録は端末の中だけに残り、サーバへは匿名のまま届く（誰のものにもならない）。
+ * あとから設定で名乗れば、それまでの分もその子のものになる。
+ */
+export declare function chooseAnonymous(): void;
 export interface StudentIdentity {
     /** サーバが発行したID。氏名は含まれない */
     studentId: string;
@@ -37,5 +46,24 @@ export type ResolveResult = {
  * エラーはそのまま子どもに見せられる日本語で返す。
  */
 export declare function resolveStudent(config: ResolveConfig, joinCode: string, number: number): Promise<ResolveResult>;
+export interface ClaimResult {
+    ok: boolean;
+    /** その端末から拾えた件数。名乗るのが初めてなら、これまでの全部が入る */
+    events: number;
+    tests: number;
+    skills: number;
+}
+/**
+ * この端末がそれまで匿名で送っていた記録を、名乗った子のものにする。
+ *
+ * 端末に残っているログは直近200件までなので、送り直しだけでは
+ * それより前の記録を拾えない。サーバ側で device_key を手がかりに付け替える。
+ *
+ * **すでに誰かのものになっている行は動かさない**（サーバ側でそう書いてある）。
+ * 同じ端末を別の子が使っても、前の子の記録を奪うことはない。
+ *
+ * 失敗しても学習は止めない。次に名乗り直したときにまた拾える。
+ */
+export declare function claimDevice(config: ResolveConfig, studentId?: string): Promise<ClaimResult>;
 export {};
 //# sourceMappingURL=student.d.ts.map

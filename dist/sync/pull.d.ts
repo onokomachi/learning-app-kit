@@ -129,4 +129,53 @@ export declare function weekStart(date: string): string;
  * 「1問だけやって落ちた週」がグラフ上で急落に見えることがない。
  */
 export declare function weeklyTrend(rows: readonly MyActivityRow[], weeks?: number, today?: string, minAnswers?: number): WeekPoint[];
+/** 1回ぶんのテスト結果。返るのは自分の点数だけで、学級の平均も順位も返らない。 */
+export interface MyTestRow {
+    app_id: string;
+    taken_date: string;
+    mode: string | null;
+    total: number | null;
+    total_max: number | null;
+    omote_score: number | null;
+    omote_max: number | null;
+    ura_score: number | null;
+    ura_max: number | null;
+    event_id: string;
+}
+export type MyTestsResult = {
+    ok: true;
+    rows: MyTestRow[];
+} | {
+    ok: false;
+    message: string;
+};
+/**
+ * 自分のテスト結果を新しい順に読む。
+ *
+ * **サーバは他人の点数を1件も返さない。** 学級平均を返してしまえば、
+ * 画面がそれを出さない約束をしていても、いつか誰かが出す。
+ * 比べる相手を過去の自分だけにする約束は、データ層で守る。
+ */
+export declare function fetchMyTests(config: ResolveConfig, studentId: string | null | undefined, limit?: number): Promise<MyTestsResult>;
+/** テストの点を「同じ範囲どうし」で並べる。表と裏は満点がちがうので混ぜない。 */
+export interface TestPoint {
+    date: string;
+    score: number;
+    max: number;
+    /** 満点を100としたときの位置。グラフの縦軸に使う */
+    ratio: number;
+}
+/**
+ * 同じ面（表／裏／ぜんぶ）のテストだけを、古い順に並べる。
+ *
+ * 混ぜてはいけない。表100点満点の82点と、裏50点満点の45点を同じ線に乗せると、
+ * 下がったように見える。満点のちがう回を1本のグラフにしない。
+ */
+export declare function testTrend(rows: readonly MyTestRow[], mode?: string): TestPoint[];
+/** どの範囲のテストを何回受けたか。グラフに出す範囲を選ぶのに使う。 */
+export declare function testModes(rows: readonly MyTestRow[]): {
+    mode: string;
+    count: number;
+    max: number;
+}[];
 //# sourceMappingURL=pull.d.ts.map
