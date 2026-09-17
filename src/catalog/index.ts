@@ -7,7 +7,7 @@
  *   3. 下の CATALOGS に1行足す
  * バックエンドのテーブルは一切変わらない。
  */
-import type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
+import type { AppCatalog, ModuleEntry, ResolvedSkill, MisconceptionEntry } from './types.js';
 import { hitotsunohana } from './hitotsunohana.js';
 import { tsunagi } from './tsunagi.js';
 import { upandloose } from './upandloose.js';
@@ -20,13 +20,34 @@ import { karakuri } from './karakuri.js';
 import { kawari } from './kawari.js';
 import { suusei } from './suusei.js';
 import { syousu } from './syousu.js';
+import { COMMON_EXTRA_MODULES, APP_EXTRA_MODULES } from './extras.js';
 
 export type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
 export type { ModuleEntry, SkillEntry } from './types.js';
 
+/**
+ * レベル表に無い記号（本番テスト・ボス戦・エラーハンターなど）を足す。
+ *
+ * module_id が同じものは1つにまとめる。まとめないと、教師の画面に
+ * 「エラーハンター」が2つ並ぶ。skill_id が重なったときは先に来たほうを残す。
+ */
+function withExtras(c: AppCatalog): AppCatalog {
+  const merged = new Map<string, ModuleEntry>();
+  for (const m of [...COMMON_EXTRA_MODULES, ...(APP_EXTRA_MODULES[c.app_id] ?? [])]) {
+    const cur = merged.get(m.module_id);
+    if (!cur) { merged.set(m.module_id, { ...m, skills: [...m.skills] }); continue; }
+    const seen = new Set(cur.skills.map((s) => s.skill_id));
+    for (const s of m.skills) if (!seen.has(s.skill_id)) cur.skills.push(s);
+  }
+  // skill_count はレベル表のぶんだけ。ここでは触らない
+  return { ...c, extra_modules: [...merged.values()] };
+}
+
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu].map((c) => [c.app_id, c]),
+  [hitotsunohana, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
+    .map(withExtras)
+    .map((c) => [c.app_id, c]),
 );
 
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
@@ -44,24 +65,29 @@ export function listApps(): AppCatalog[] {
 export function lookupSkill(appId: string, skillId: string): ResolvedSkill | null {
   const app = CATALOGS[appId];
   if (!app) return null;
-  for (const mod of app.modules) {
-    const skill = mod.skills.find((s) => s.skill_id === skillId);
-    if (!skill) continue;
-    return {
-      app_id: app.app_id,
-      app_title: app.title,
-      subject: app.subject,
-      grade: app.grade,
-      module_id: mod.module_id,
-      module_title: mod.title,
-      skill_id: skill.skill_id,
-      label: skill.label,
-      desc: skill.desc,
-      answer_kind: skill.answer_kind,
-      misconceptions: app.misconceptions.filter((m) => m.skills.includes(skillId)),
-    };
-  }
-  return null;
+  const find = (mods: readonly ModuleEntry[], isExtra: boolean): ResolvedSkill | null => {
+    for (const mod of mods) {
+      const skill = mod.skills.find((s) => s.skill_id === skillId);
+      if (!skill) continue;
+      return {
+        app_id: app.app_id,
+        app_title: app.title,
+        subject: app.subject,
+        grade: app.grade,
+        module_id: mod.module_id,
+        module_title: mod.title,
+        skill_id: skill.skill_id,
+        label: skill.label,
+        desc: skill.desc,
+        answer_kind: skill.answer_kind,
+        misconceptions: app.misconceptions.filter((m) => m.skills.includes(skillId)),
+        is_extra: isExtra,
+      };
+    }
+    return null;
+  };
+  // レベル表を先に見る。同じ記号があれば単元の項目として扱う
+  return find(app.modules, false) ?? find(app.extra_modules ?? [], true);
 }
 
 /** 表示用の短い名前。カタログに無い記号は skillId をそのまま返す（画面が空にならないように）。 */

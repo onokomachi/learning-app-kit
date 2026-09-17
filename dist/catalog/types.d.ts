@@ -45,6 +45,12 @@ export interface AppCatalog {
     generated_at: string;
     skill_count: number;
     modules: ModuleEntry[];
+    /**
+     * レベル表には無いが、アプリが記録を送ってくる記号（本番テスト・ボス戦・
+     * エラーハンターなど）。extras.ts で手当てし、index.ts が読み込み時に足す。
+     * **skill_count には数えない**——単元の到達度の分母を、遊び方の数で膨らませないため。
+     */
+    extra_modules?: ModuleEntry[];
     misconceptions: MisconceptionEntry[];
 }
 /** lookupSkill が返す、記号を解決した結果。 */
@@ -61,5 +67,7 @@ export interface ResolvedSkill {
     answer_kind: string;
     /** この skillId に結びついている誤概念（無ければ空） */
     misconceptions: MisconceptionEntry[];
+    /** レベル表の項目ではなく、本番テストやボス戦のような遊び方のほうか */
+    is_extra: boolean;
 }
 //# sourceMappingURL=types.d.ts.map
