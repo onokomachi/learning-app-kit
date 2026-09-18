@@ -9,6 +9,7 @@
  */
 import type { AppCatalog, ModuleEntry, ResolvedSkill, MisconceptionEntry } from './types.js';
 import { hitotsunohana } from './hitotsunohana.js';
+import { gongitsune } from './gongitsune.js';
 import { tsunagi } from './tsunagi.js';
 import { upandloose } from './upandloose.js';
 import { suihei } from './suihei.js';
@@ -45,7 +46,7 @@ function withExtras(c: AppCatalog): AppCatalog {
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
+  [hitotsunohana, gongitsune, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
     .map(withExtras)
     .map((c) => [c.app_id, c]),
 );

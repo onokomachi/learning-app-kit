@@ -212,9 +212,9 @@ test('端末が空なら、起動時には送らない', async () => {
   assert.equal(called, false);
 });
 
-test('国語3単元が登録され、それぞれ違う切り口で並ぶ', () => {
+test('国語4単元が登録され、それぞれ違う切り口で並ぶ', () => {
   const kokugo = listApps().filter((a) => a.subject === '国語');
-  assert.equal(kokugo.length, 3);
+  assert.equal(kokugo.length, 4);
   // 物語文・説明文は設問ごと、つなぎ言葉はカテゴリ×難易度
   assert.ok(lookupSkill('upandloose', 'q-1'), '説明文は設問で引ける');
   const t = lookupSkill('tsunagi', 'gyakusetsu-normal');
