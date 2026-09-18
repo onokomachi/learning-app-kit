@@ -35,7 +35,7 @@ const emptyRow = () => Array.from({ length: COLS }, () => '');
 
 const S = {
   wrap: {
-    borderRadius: 18, border: '1px solid #dbe4f0', background: '#fbfdff',
+    borderRadius: 18, border: '2px dashed #bcd3ec', background: '#f7fbff',
     padding: 14, marginTop: 10, marginBottom: 10,
     fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
     color: '#0f2540',
@@ -46,16 +46,22 @@ const S = {
     border: 0, borderRadius: 10, cursor: 'pointer', fontWeight: 900, fontSize: 15,
     padding: '6px 12px', background: on ? '#0ea5e9' : '#e8eff8', color: on ? '#fff' : '#54637a',
   }),
+  /**
+   * 1マス。**空でも枠が見えるようにする。**
+   * 枠を透明にすると、子どもには「どこに書けるのか」が分からない
+   * （実際、最初の版がそうなっていて、線だけが並んで見えた）。
+   */
   cell: (on: boolean) => ({
-    width: 34, height: 40, borderRadius: 8, fontSize: 20, fontWeight: 800,
+    width: 32, height: 38, fontSize: 20, fontWeight: 800,
     display: 'grid', placeItems: 'center', cursor: 'pointer', userSelect: 'none',
-    background: on ? '#e0f2fe' : 'transparent',
-    border: on ? '2px solid #0ea5e9' : '2px solid transparent',
-    color: '#0f2540',
+    background: on ? '#e0f2fe' : '#fff',
+    border: on ? '2px solid #0ea5e9' : '1px solid #e3ebf5',
+    borderRadius: 4, boxSizing: 'border-box', color: '#0f2540',
   }),
+  /** けいさんらんのキーパッド。答えの入力らんと見た目を変えて、取りちがえないようにする */
   key: {
-    width: 52, height: 44, borderRadius: 10, border: '1px solid #dbe4f0', background: '#fff',
-    fontSize: 18, fontWeight: 800, color: '#0f2540', cursor: 'pointer',
+    width: 42, height: 38, borderRadius: 8, border: '1px solid #cfdcec', background: '#f2f7fd',
+    fontSize: 16, fontWeight: 800, color: '#2f4d75', cursor: 'pointer',
   },
   ghost: {
     border: '1px solid #dbe4f0', borderRadius: 10, background: '#fff',
@@ -113,7 +119,10 @@ export function ScratchPad({
   return (
     <div style={S.wrap as React.CSSProperties}>
       <div style={S.head as React.CSSProperties}>
-        <p style={S.title as React.CSSProperties}>けいさんらん（じゆうに つかっていいよ）</p>
+        <p style={S.title as React.CSSProperties}>
+          けいさんらん（じゆうに つかっていいよ）
+          <span style={{ fontWeight: 600, color: '#8496ad', marginLeft: 6 }}>マスを おして 数を 入れてね</span>
+        </p>
         <button type="button" onClick={clear} style={{ ...(S.ghost as React.CSSProperties), marginLeft: 'auto' }}>
           ぜんぶ けす
         </button>
@@ -160,13 +169,14 @@ function ColumnFrame({ grid, cur, setCur, op }: {
     <div style={{ overflowX: 'auto' }}>
       <div style={{ display: 'inline-block', minWidth: 300 }}>
         {grid.map((row, r) => (
-          <div key={r} style={{ display: 'flex', alignItems: 'center' }}>
+          <div key={r} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
             <span style={{ width: 26, fontSize: 18, fontWeight: 800, color: '#7c8da6', textAlign: 'center' }}>
               {r === 1 ? op : ''}
             </span>
             <div style={{
-              display: 'flex',
-              borderBottom: r === 1 ? '2px solid #0f2540' : '1px solid #edf2f9',
+              display: 'flex', gap: 2,
+              borderBottom: r === 1 ? '3px solid #0f2540' : 'none',
+              paddingBottom: r === 1 ? 3 : 0,
             }}>
               {row.map((v, c) => (
                 <div key={c} onClick={() => setCur({ row: r, col: c })}
@@ -188,7 +198,7 @@ function DivisionFrame({ grid, cur, setCur }: {
     <div style={{ overflowX: 'auto' }}>
       <div style={{ display: 'inline-block', minWidth: 300 }}>
         {grid.map((row, r) => (
-          <div key={r} style={{ display: 'flex', alignItems: 'center' }}>
+          <div key={r} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
             {/* 左の欄はわる数を書くところ。1行目（商）と2行目（わられる数）だけ使う */}
             <div style={{
               width: 60, display: 'flex', justifyContent: 'flex-end',
@@ -201,9 +211,11 @@ function DivisionFrame({ grid, cur, setCur }: {
               )}
             </div>
             <div style={{
-              display: 'flex',
-              borderTop: r === 1 ? '2px solid #0f2540' : 'none',
-              borderBottom: r >= 2 && r % 2 === 0 ? '1px solid #0f2540' : '1px solid #edf2f9',
+              display: 'flex', gap: 2,
+              borderTop: r === 1 ? '3px solid #0f2540' : 'none',
+              paddingTop: r === 1 ? 3 : 0,
+              borderBottom: r >= 2 && r % 2 === 0 ? '2px solid #0f2540' : 'none',
+              paddingBottom: r >= 2 && r % 2 === 0 ? 3 : 0,
             }}>
               {row.slice(1).map((v, i) => {
                 const c = i + 1;
