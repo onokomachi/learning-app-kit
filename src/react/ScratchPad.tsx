@@ -72,7 +72,11 @@ const S = {
 interface Cursor { row: number; col: number }
 
 export interface ScratchPadProps {
-  /** 最初に選んでおく計算。省略するとわり算 */
+  /**
+   * 最初に選んでおく計算。省略すると ops の1つ目。
+   * 開いたとたんに ぜんぜんちがう筆算のわくが出ていると、子どもは
+   * 「この計算をしなさい」と言われた気になる。単元でよく使う計算を先頭に置く。
+   */
   defaultOp?: ScratchOp;
   /** 使える計算を絞る（例: たし算とひき算だけの単元） */
   ops?: ScratchOp[];
@@ -83,9 +87,9 @@ export interface ScratchPadProps {
 }
 
 export function ScratchPad({
-  defaultOp = '÷', ops = ['+', '-', '×', '÷'], decimal = true, rows = 6,
+  defaultOp, ops = ['+', '-', '×', '÷'], decimal = true, rows = 6,
 }: ScratchPadProps) {
-  const [op, setOp] = useState<ScratchOp>(defaultOp);
+  const [op, setOp] = useState<ScratchOp>(defaultOp ?? ops[0] ?? '÷');
   const [grid, setGrid] = useState<string[][]>(() => Array.from({ length: rows }, emptyRow));
   const [cur, setCur] = useState<Cursor>({ row: 0, col: COLS - 3 });
 
