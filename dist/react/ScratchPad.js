@@ -64,8 +64,8 @@ const S = {
         color: '#64748b', fontWeight: 800, fontSize: 12, padding: '6px 12px', cursor: 'pointer',
     },
 };
-export function ScratchPad({ defaultOp = '÷', ops = ['+', '-', '×', '÷'], decimal = true, rows = 6, }) {
-    const [op, setOp] = useState(defaultOp);
+export function ScratchPad({ defaultOp, ops = ['+', '-', '×', '÷'], decimal = true, rows = 6, }) {
+    const [op, setOp] = useState(defaultOp ?? ops[0] ?? '÷');
     const [grid, setGrid] = useState(() => Array.from({ length: rows }, emptyRow));
     const [cur, setCur] = useState({ row: 0, col: COLS - 3 });
     const put = (v) => {
