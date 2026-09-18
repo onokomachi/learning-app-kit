@@ -210,12 +210,16 @@ function DivisionFrame({ grid, cur, setCur }: {
                   style={S.cell(cur.row === r && cur.col === 0) as React.CSSProperties}>{row[0]}</div>
               )}
             </div>
+            {/*
+              かぎ（わられる数の上の線）だけを引く。
+              途中のひき算の線は引かない——決まった位置に引いてしまうと、
+              実際の筆算とずれた場所に線があることになり、かえって迷わせる。
+              どこで区切るかは、子どもが数を書きながら決める。
+            */}
             <div style={{
               display: 'flex', gap: 2,
               borderTop: r === 1 ? '3px solid #0f2540' : 'none',
               paddingTop: r === 1 ? 3 : 0,
-              borderBottom: r >= 2 && r % 2 === 0 ? '2px solid #0f2540' : 'none',
-              paddingBottom: r >= 2 && r % 2 === 0 ? 3 : 0,
             }}>
               {row.slice(1).map((v, i) => {
                 const c = i + 1;
