@@ -113,8 +113,6 @@ function DivisionFrame({ grid, cur, setCur }) {
                                 display: 'flex', gap: 2,
                                 borderTop: r === 1 ? '3px solid #0f2540' : 'none',
                                 paddingTop: r === 1 ? 3 : 0,
-                                borderBottom: r >= 2 && r % 2 === 0 ? '2px solid #0f2540' : 'none',
-                                paddingBottom: r >= 2 && r % 2 === 0 ? 3 : 0,
                             }, children: row.slice(1).map((v, i) => {
                                 const c = i + 1;
                                 return (_jsx("div", { onClick: () => setCur({ row: r, col: c }), style: S.cell(cur.row === r && cur.col === c), children: v }, c));
