@@ -29,6 +29,15 @@ const OPS = [
 /** 1行ぶんのマス。右づめで書くので、配列の末尾が一の位側になる */
 const COLS = 8;
 const emptyRow = () => Array.from({ length: COLS }, () => '');
+/**
+ * わる数のマス数。3けた（小4: 3けた÷3けた）と、小数のわる数（例 12.5・0.25）が入る数。
+ * わる数は**マス目とは別の入れ物**にしてある。マス目の1列目をわる数に使うと、
+ * 1けた入れた時点でカーソルがわられる数の側へ進み、2けた目以降が入らない
+ * （実際に 23 と打つと「2 ⌐ 3…」になっていた）。
+ */
+const DIV_MAX = 4;
+/** カーソルがわる数の入れ物にあることを表す行番号 */
+const DIVISOR_ROW = -1;
 const S = {
     wrap: {
         borderRadius: 18, border: '2px dashed #bcd3ec', background: '#f7fbff',
@@ -68,7 +77,13 @@ export function ScratchPad({ defaultOp, ops = ['+', '-', '×', '÷'], decimal = 
     const [op, setOp] = useState(defaultOp ?? ops[0] ?? '÷');
     const [grid, setGrid] = useState(() => Array.from({ length: rows }, emptyRow));
     const [cur, setCur] = useState({ row: 0, col: COLS - 3 });
+    const [divisor, setDivisor] = useState('');
     const put = (v) => {
+        // わる数は右づめで足していく（電卓と同じ）。いっぱいになったらそれ以上は入れない
+        if (cur.row === DIVISOR_ROW) {
+            setDivisor((d) => (d.length < DIV_MAX ? d + v : d));
+            return;
+        }
         setGrid((g) => {
             const next = g.map((r) => [...r]);
             next[cur.row][cur.col] = v;
@@ -78,6 +93,10 @@ export function ScratchPad({ defaultOp, ops = ['+', '-', '×', '÷'], decimal = 
         setCur((c) => ({ row: c.row, col: Math.min(COLS - 1, c.col + 1) }));
     };
     const back = () => {
+        if (cur.row === DIVISOR_ROW) {
+            setDivisor((d) => d.slice(0, -1));
+            return;
+        }
         setCur((c) => {
             const col = Math.max(0, c.col - 1);
             setGrid((g) => {
@@ -90,9 +109,10 @@ export function ScratchPad({ defaultOp, ops = ['+', '-', '×', '÷'], decimal = 
     };
     const clear = () => {
         setGrid(Array.from({ length: rows }, emptyRow));
+        setDivisor('');
         setCur({ row: 0, col: COLS - 3 });
     };
-    return (_jsxs("div", { style: S.wrap, children: [_jsxs("div", { style: S.head, children: [_jsxs("p", { style: S.title, children: ["\u3051\u3044\u3055\u3093\u3089\u3093\uFF08\u3058\u3086\u3046\u306B \u3064\u304B\u3063\u3066\u3044\u3044\u3088\uFF09", _jsx("span", { style: { fontWeight: 600, color: '#8496ad', marginLeft: 6 }, children: "\u30DE\u30B9\u3092 \u304A\u3057\u3066 \u6570\u3092 \u5165\u308C\u3066\u306D" })] }), _jsx("button", { type: "button", onClick: clear, style: { ...S.ghost, marginLeft: 'auto' }, children: "\u305C\u3093\u3076 \u3051\u3059" })] }), ops.length > 1 && (_jsx("div", { style: { display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }, children: OPS.filter((o) => ops.includes(o.op)).map((o) => (_jsxs("button", { type: "button", onClick: () => setOp(o.op), style: S.opBtn(op === o.op), children: [o.op, " ", o.label] }, o.op))) })), op === '÷' ? _jsx(DivisionFrame, { grid: grid, cur: cur, setCur: setCur })
+    return (_jsxs("div", { style: S.wrap, children: [_jsxs("div", { style: S.head, children: [_jsxs("p", { style: S.title, children: ["\u3051\u3044\u3055\u3093\u3089\u3093\uFF08\u3058\u3086\u3046\u306B \u3064\u304B\u3063\u3066\u3044\u3044\u3088\uFF09", _jsx("span", { style: { fontWeight: 600, color: '#8496ad', marginLeft: 6 }, children: "\u30DE\u30B9\u3092 \u304A\u3057\u3066 \u6570\u3092 \u5165\u308C\u3066\u306D" })] }), _jsx("button", { type: "button", onClick: clear, style: { ...S.ghost, marginLeft: 'auto' }, children: "\u305C\u3093\u3076 \u3051\u3059" })] }), ops.length > 1 && (_jsx("div", { style: { display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }, children: OPS.filter((o) => ops.includes(o.op)).map((o) => (_jsxs("button", { type: "button", onClick: () => setOp(o.op), style: S.opBtn(op === o.op), children: [o.op, " ", o.label] }, o.op))) })), op === '÷' ? _jsx(DivisionFrame, { grid: grid, divisor: divisor, cur: cur, setCur: setCur })
                 : _jsx(ColumnFrame, { grid: grid, cur: cur, setCur: setCur, op: op }), _jsxs("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }, children: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((n) => (_jsx("button", { type: "button", onClick: () => put(n), style: S.key, children: n }, n))), decimal && (_jsx("button", { type: "button", onClick: () => put('.'), style: S.key, children: "." })), _jsx("button", { type: "button", onClick: back, style: { ...S.key, color: '#e11d48' }, children: "\u2190" })] }), _jsx("p", { style: { fontSize: 11, color: '#8496ad', marginTop: 10, marginBottom: 0, lineHeight: 1.7 }, children: "\u3053\u3053\u306F \u7B54\u3048\u5408\u308F\u305B\u3092 \u3057\u306A\u3044\u3088\u3002\u3058\u3086\u3046\u306B \u66F8\u3044\u3066\u3001\u7B54\u3048\u306F \u4E0A\u306E \u3089\u3093\u306B \u5165\u308C\u3066\u306D\u3002" })] }));
 }
 /** たし算・ひき算・かけ算。上下にならべて、下に線を引く */
@@ -104,19 +124,22 @@ function ColumnFrame({ grid, cur, setCur, op }) {
                         }, children: row.map((v, c) => (_jsx("div", { onClick: () => setCur({ row: r, col: c }), style: S.cell(cur.row === r && cur.col === c), children: v }, c))) })] }, r))) }) }));
 }
 /** わり算。かぎかっこの形（わる数 ⌐ わられる数、上に商） */
-function DivisionFrame({ grid, cur, setCur }) {
+function DivisionFrame({ grid, divisor, cur, setCur }) {
+    const onDivisor = cur.row === DIVISOR_ROW;
+    // 右づめで並べる（かぎのすぐ左に一の位が来るように）
+    const divCells = Array.from({ length: DIV_MAX }, (_, i) => divisor[i - (DIV_MAX - divisor.length)] ?? '');
     return (_jsxs("div", { style: { overflowX: 'auto' }, children: [_jsx("div", { style: { display: 'inline-block', minWidth: 300 }, children: grid.map((row, r) => (_jsxs("div", { style: { display: 'flex', alignItems: 'center', marginBottom: 2 }, children: [_jsx("div", { style: {
-                                width: 60, display: 'flex', justifyContent: 'flex-end',
+                                width: DIV_MAX * 34, display: 'flex', justifyContent: 'flex-end', gap: 2,
                                 borderRight: r === 1 ? '2px solid #0f2540' : 'none',
-                                paddingRight: 4,
-                            }, children: r === 1 && (_jsx("div", { onClick: () => setCur({ row: r, col: 0 }), style: S.cell(cur.row === r && cur.col === 0), children: row[0] })) }), _jsx("div", { style: {
+                                paddingRight: 4, boxSizing: 'content-box',
+                            }, children: r === 1 && divCells.map((v, i) => (_jsx("div", { onClick: () => setCur({ row: DIVISOR_ROW, col: 0 }), style: S.cell(onDivisor), children: v }, i))) }), _jsx("div", { style: {
                                 display: 'flex', gap: 2,
                                 borderTop: r === 1 ? '3px solid #0f2540' : 'none',
                                 paddingTop: r === 1 ? 3 : 0,
                             }, children: row.slice(1).map((v, i) => {
                                 const c = i + 1;
                                 return (_jsx("div", { onClick: () => setCur({ row: r, col: c }), style: S.cell(cur.row === r && cur.col === c), children: v }, c));
-                            }) })] }, r))) }), _jsx("p", { style: { fontSize: 11, color: '#8496ad', margin: '6px 0 0' }, children: "\u4E0A\u306E \u3060\u3093\u304C \u5546\u3001\u304B\u304E\u306E \u5DE6\u304C \u308F\u308B\u6570\u3001\u53F3\u304C \u308F\u3089\u308C\u308B\u6570\u3060\u3088\u3002" })] }));
+                            }) })] }, r))) }), _jsxs("p", { style: { fontSize: 11, color: '#8496ad', margin: '6px 0 0' }, children: ["\u4E0A\u306E \u3060\u3093\u304C \u5546\u3001\u304B\u304E\u306E \u5DE6\u304C \u308F\u308B\u6570\uFF08", DIV_MAX, "\u30DE\u30B9\u307E\u3067\uFF09\u3001\u53F3\u304C \u308F\u3089\u308C\u308B\u6570\u3060\u3088\u3002"] })] }));
 }
 /**
  * ボタンを押したときだけ開く「けいさんらん」。
