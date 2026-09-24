@@ -33,6 +33,16 @@ const OPS: { op: ScratchOp; label: string }[] = [
 const COLS = 8;
 const emptyRow = () => Array.from({ length: COLS }, () => '');
 
+/**
+ * わる数のマス数。3けた（小4: 3けた÷3けた）と、小数のわる数（例 12.5・0.25）が入る数。
+ * わる数は**マス目とは別の入れ物**にしてある。マス目の1列目をわる数に使うと、
+ * 1けた入れた時点でカーソルがわられる数の側へ進み、2けた目以降が入らない
+ * （実際に 23 と打つと「2 ⌐ 3…」になっていた）。
+ */
+const DIV_MAX = 4;
+/** カーソルがわる数の入れ物にあることを表す行番号 */
+const DIVISOR_ROW = -1;
+
 const S = {
   wrap: {
     borderRadius: 18, border: '2px dashed #bcd3ec', background: '#f7fbff',
@@ -92,8 +102,14 @@ export function ScratchPad({
   const [op, setOp] = useState<ScratchOp>(defaultOp ?? ops[0] ?? '÷');
   const [grid, setGrid] = useState<string[][]>(() => Array.from({ length: rows }, emptyRow));
   const [cur, setCur] = useState<Cursor>({ row: 0, col: COLS - 3 });
+  const [divisor, setDivisor] = useState('');
 
   const put = (v: string) => {
+    // わる数は右づめで足していく（電卓と同じ）。いっぱいになったらそれ以上は入れない
+    if (cur.row === DIVISOR_ROW) {
+      setDivisor((d) => (d.length < DIV_MAX ? d + v : d));
+      return;
+    }
     setGrid((g) => {
       const next = g.map((r) => [...r]);
       next[cur.row]![cur.col] = v;
@@ -104,6 +120,10 @@ export function ScratchPad({
   };
 
   const back = () => {
+    if (cur.row === DIVISOR_ROW) {
+      setDivisor((d) => d.slice(0, -1));
+      return;
+    }
     setCur((c) => {
       const col = Math.max(0, c.col - 1);
       setGrid((g) => {
@@ -117,6 +137,7 @@ export function ScratchPad({
 
   const clear = () => {
     setGrid(Array.from({ length: rows }, emptyRow));
+    setDivisor('');
     setCur({ row: 0, col: COLS - 3 });
   };
 
@@ -144,7 +165,7 @@ export function ScratchPad({
       )}
 
       {/* わり算だけ形がちがう。他の3つは たてに ならべて 下に線を引く形 */}
-      {op === '÷' ? <DivisionFrame grid={grid} cur={cur} setCur={setCur} />
+      {op === '÷' ? <DivisionFrame grid={grid} divisor={divisor} cur={cur} setCur={setCur} />
         : <ColumnFrame grid={grid} cur={cur} setCur={setCur} op={op} />}
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
@@ -195,24 +216,27 @@ function ColumnFrame({ grid, cur, setCur, op }: {
 }
 
 /** わり算。かぎかっこの形（わる数 ⌐ わられる数、上に商） */
-function DivisionFrame({ grid, cur, setCur }: {
-  grid: string[][]; cur: Cursor; setCur: (c: Cursor) => void;
+function DivisionFrame({ grid, divisor, cur, setCur }: {
+  grid: string[][]; divisor: string; cur: Cursor; setCur: (c: Cursor) => void;
 }) {
+  const onDivisor = cur.row === DIVISOR_ROW;
+  // 右づめで並べる（かぎのすぐ左に一の位が来るように）
+  const divCells = Array.from({ length: DIV_MAX }, (_, i) => divisor[i - (DIV_MAX - divisor.length)] ?? '');
   return (
     <div style={{ overflowX: 'auto' }}>
       <div style={{ display: 'inline-block', minWidth: 300 }}>
         {grid.map((row, r) => (
           <div key={r} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-            {/* 左の欄はわる数を書くところ。1行目（商）と2行目（わられる数）だけ使う */}
+            {/* 左の欄はわる数を書くところ。2行目（わられる数の行）にだけ出す */}
             <div style={{
-              width: 60, display: 'flex', justifyContent: 'flex-end',
+              width: DIV_MAX * 34, display: 'flex', justifyContent: 'flex-end', gap: 2,
               borderRight: r === 1 ? '2px solid #0f2540' : 'none',
-              paddingRight: 4,
+              paddingRight: 4, boxSizing: 'content-box',
             }}>
-              {r === 1 && (
-                <div onClick={() => setCur({ row: r, col: 0 })}
-                  style={S.cell(cur.row === r && cur.col === 0) as React.CSSProperties}>{row[0]}</div>
-              )}
+              {r === 1 && divCells.map((v, i) => (
+                <div key={i} onClick={() => setCur({ row: DIVISOR_ROW, col: 0 })}
+                  style={S.cell(onDivisor) as React.CSSProperties}>{v}</div>
+              ))}
             </div>
             {/*
               かぎ（わられる数の上の線）だけを引く。
@@ -237,7 +261,7 @@ function DivisionFrame({ grid, cur, setCur }: {
         ))}
       </div>
       <p style={{ fontSize: 11, color: '#8496ad', margin: '6px 0 0' }}>
-        上の だんが 商、かぎの 左が わる数、右が わられる数だよ。
+        上の だんが 商、かぎの 左が わる数（{DIV_MAX}マスまで）、右が わられる数だよ。
       </p>
     </div>
   );
