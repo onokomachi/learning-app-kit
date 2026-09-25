@@ -5,4 +5,5 @@ export { getStudent, clearStudent, resolveStudent, subscribeStudent, getJoinChoi
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
 export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';
 export { fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween, fetchMySkillTotals, weeklyTrend, weekStart, fetchMyTests, testTrend, testModes, } from './pull.js';
+export { isSchoolTime, currentPlayMode, needsPlayModeAsk, setPlayMode, forceSolo, pairChecker, subscribePlayMode, PLAY_MODE_WINDOW_MS, } from './playMode.js';
 //# sourceMappingURL=index.js.map

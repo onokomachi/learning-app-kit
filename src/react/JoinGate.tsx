@@ -18,6 +18,7 @@ import {
   resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent,
   type ResolveConfig, type StudentIdentity,
 } from '../sync/index.js';
+import { PlayModeGate } from './PlayModeGate.js';
 
 const S = {
   scrim: {
@@ -145,6 +146,9 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
 /**
  * まだ決めていない子にだけ、はじめの1回だけ出す。
  * 名乗った子にも、断った子にも、二度と出ない。
+ *
+ * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
+ * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
 export function JoinGate({ config }: { config: ResolveConfig }) {
   const [open, setOpen] = useState(false);
@@ -157,7 +161,8 @@ export function JoinGate({ config }: { config: ResolveConfig }) {
     setOpen(true);
   }, [config.supabaseUrl, config.supabaseKey]);
 
-  if (!open) return null;
+  const configured = !!config.supabaseUrl && !!config.supabaseKey;
+  if (!open) return <PlayModeGate enabled={configured} />;
   return (
     <div style={S.scrim} role="dialog" aria-label="がっきゅうコードの入力">
       <div style={S.card}>

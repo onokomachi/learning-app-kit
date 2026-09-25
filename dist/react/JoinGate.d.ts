@@ -11,10 +11,13 @@ export interface JoinFormProps {
 /**
  * まだ決めていない子にだけ、はじめの1回だけ出す。
  * 名乗った子にも、断った子にも、二度と出ない。
+ *
+ * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
+ * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
 export declare function JoinGate({ config }: {
     config: ResolveConfig;
-}): import("react").JSX.Element | null;
+}): import("react").JSX.Element;
 /**
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。
  * 「コードを入れずに つかう」を選んだ子の、あとからの入口になる。

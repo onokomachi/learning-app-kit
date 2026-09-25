@@ -24,3 +24,8 @@ export type {
   MySkillTotalRow, MySkillTotalsResult, WeekPoint,
   MyTestRow, MyTestsResult, TestPoint,
 } from './pull.js';
+export {
+  isSchoolTime, currentPlayMode, needsPlayModeAsk, setPlayMode, forceSolo,
+  pairChecker, subscribePlayMode, PLAY_MODE_WINDOW_MS,
+} from './playMode.js';
+export type { PlayMode } from './playMode.js';

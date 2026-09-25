@@ -28,6 +28,11 @@ export interface EventRow {
     ts: number;
     /** 本番テストのときだけ。点数と大問ごとの正誤 */
     detail?: unknown;
+    /**
+     * 1台を2人で使っていた時間の記録か（playMode.ts）。true のときだけ付ける。
+     * サーバは学力の集計（正答率）からこれを外し、取り組んだ量には数える。
+     */
+    pair?: true;
 }
 /**
  * どこまで送れたか（端末の時刻・ミリ秒）。

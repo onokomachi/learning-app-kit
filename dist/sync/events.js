@@ -1,5 +1,6 @@
 import { getDeviceKey } from './device.js';
 import { getStudent } from './student.js';
+import { pairChecker } from './playMode.js';
 /** サーバ側の受け入れ上限と合わせる */
 const MAX_EVENTS = 500;
 const markKey = (appId) => `lak_sent_ts_${appId}`;
@@ -44,6 +45,7 @@ export function clearSentMark(appId) {
 export function toEventRows(logs, sinceTs) {
     if (!logs || logs.length === 0)
         return [];
+    const isPair = pairChecker();
     const rows = [];
     for (const l of logs) {
         if (!l || typeof l.ts !== 'number' || l.ts <= sinceTs)
@@ -61,6 +63,9 @@ export function toEventRows(logs, sinceTs) {
             abandoned: !!l.abandoned,
             ts: l.ts,
             ...(l.detail ? { detail: l.detail } : {}),
+            // 本番テスト（detail 付き）は実力を測る場面なので、ペアの時間でも印を付けない
+            // （テストに入るときに forceSolo でソロへ切り替える前提）
+            ...(!l.detail && isPair(l.ts) ? { pair: true } : {}),
         });
     }
     rows.sort((a, b) => a.ts - b.ts);
