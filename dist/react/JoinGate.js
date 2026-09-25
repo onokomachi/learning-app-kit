@@ -16,6 +16,7 @@ import { jsxs as _jsxs, jsx as _jsx, Fragment as _Fragment } from "react/jsx-run
  */
 import { useEffect, useState } from 'react';
 import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, } from '../sync/index.js';
+import { PlayModeGate } from './PlayModeGate.js';
 const S = {
     scrim: {
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -85,6 +86,9 @@ function JoinForm({ config, onDone, onSkip, onClose }) {
 /**
  * まだ決めていない子にだけ、はじめの1回だけ出す。
  * 名乗った子にも、断った子にも、二度と出ない。
+ *
+ * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
+ * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
 export function JoinGate({ config }) {
     const [open, setOpen] = useState(false);
@@ -97,8 +101,9 @@ export function JoinGate({ config }) {
             return;
         setOpen(true);
     }, [config.supabaseUrl, config.supabaseKey]);
+    const configured = !!config.supabaseUrl && !!config.supabaseKey;
     if (!open)
-        return null;
+        return _jsx(PlayModeGate, { enabled: configured });
     return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onSkip: () => { chooseAnonymous(); setOpen(false); }, onClose: () => setOpen(false) }) }) }));
 }
 /**

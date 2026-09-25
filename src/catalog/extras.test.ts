@@ -12,7 +12,7 @@ import { lookupSkill, CATALOGS, listApps } from './index.js';
 
 /** アプリが送ってくる、レベル表に載っていない記号 */
 const RECORDED_EXTRAS: Record<string, string[]> = {
-  bai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
+  bai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix', 'trial-kyokugen', 'trial-mugen'],
   gaisu: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
   suusei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
   karakuri: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'fix-rule'],

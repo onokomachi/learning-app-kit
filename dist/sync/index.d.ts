@@ -11,4 +11,6 @@ export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSe
 export type { EventRow } from './events.js';
 export { fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween, fetchMySkillTotals, weeklyTrend, weekStart, fetchMyTests, testTrend, testModes, } from './pull.js';
 export type { MySkillRow, MyProgressResult, MyActivityRow, MyActivityResult, ActivityTotals, MySkillTotalRow, MySkillTotalsResult, WeekPoint, MyTestRow, MyTestsResult, TestPoint, } from './pull.js';
+export { isSchoolTime, currentPlayMode, needsPlayModeAsk, setPlayMode, forceSolo, pairChecker, subscribePlayMode, PLAY_MODE_WINDOW_MS, } from './playMode.js';
+export type { PlayMode } from './playMode.js';
 //# sourceMappingURL=index.d.ts.map

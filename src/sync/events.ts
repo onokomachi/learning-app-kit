@@ -15,6 +15,7 @@
 import type { LogLike } from './types.js';
 import { getDeviceKey } from './device.js';
 import { getStudent } from './student.js';
+import { pairChecker } from './playMode.js';
 import type { PushConfig, PushResult } from './push.js';
 
 /** サーバへ送る1件。skill_id はカタログと同じ文字列にする。 */
@@ -31,6 +32,11 @@ export interface EventRow {
   ts: number;
   /** 本番テストのときだけ。点数と大問ごとの正誤 */
   detail?: unknown;
+  /**
+   * 1台を2人で使っていた時間の記録か（playMode.ts）。true のときだけ付ける。
+   * サーバは学力の集計（正答率）からこれを外し、取り組んだ量には数える。
+   */
+  pair?: true;
 }
 
 /** サーバ側の受け入れ上限と合わせる */
@@ -78,6 +84,7 @@ export function clearSentMark(appId: string): void {
  */
 export function toEventRows(logs: readonly LogLike[] | undefined, sinceTs: number): EventRow[] {
   if (!logs || logs.length === 0) return [];
+  const isPair = pairChecker();
   const rows: EventRow[] = [];
   for (const l of logs) {
     if (!l || typeof l.ts !== 'number' || l.ts <= sinceTs) continue;
@@ -93,6 +100,9 @@ export function toEventRows(logs: readonly LogLike[] | undefined, sinceTs: numbe
       abandoned: !!l.abandoned,
       ts: l.ts,
       ...(l.detail ? { detail: l.detail } : {}),
+      // 本番テスト（detail 付き）は実力を測る場面なので、ペアの時間でも印を付けない
+      // （テストに入るときに forceSolo でソロへ切り替える前提）
+      ...(!l.detail && isPair(l.ts) ? { pair: true as const } : {}),
     });
   }
   rows.sort((a, b) => a.ts - b.ts);
