@@ -3,4 +3,5 @@ export { useRoundRecorder } from './useRoundRecorder.js';
 export { JoinGate, JoinSettingsRow } from './JoinGate.js';
 export { ScratchPad, ScratchPadToggle } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';
+export { TrialScreen, TrialCard } from './TrialScreen.js';
 //# sourceMappingURL=index.js.map

@@ -109,4 +109,37 @@ export declare function saveTrial(config: TrialSyncConfig, rec: Omit<TrialRecord
  * 学級コードを入れていない子（studentId が無い）は端末の記録だけを返す。
  */
 export declare function syncTrialsFromServer(config: TrialSyncConfig): Promise<TrialRecord[]>;
+/** 層の見出し（第Ⅰ層…）。層の数が10を超えることは想定しない */
+export declare const NUMERALS: readonly ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"];
+/** 突破した層の数 → 子どもの画面の名前。0 は「第Ⅰ層に挑戦中」、全層なら神座 */
+export declare function floorName(cleared: number, floors: number): string;
+/** 本番テストの設問の形（各アプリの TEST_STEPS がこの形を持っている） */
+export interface TestStepLike {
+    skillId: string;
+    points: number;
+    title: string;
+    section?: string;
+}
+export interface TrialPlan {
+    floors: TrialFloorDef[];
+    /** 本番テストの各設問が、何層まで突破していれば取れるか */
+    reqs: TestItemReq[];
+    /** 予想点の満点（点のある設問の合計） */
+    max: number;
+}
+/**
+ * アプリの本番テストの設問から、神域の試練の層を組む。
+ *
+ * **層の順は本番テストの設問の順**（表の大問1 → … → 裏）。本番テストは
+ * 基本から応用へ並んでいるので、そのまま「やさしい層から」になる。
+ * 同じモジュール（記号の前半）が続く項目は1つの層にまとめ（3つまで）、
+ * それでも maxFloors を超えるときは、項目の少ない となり同士を まとめる。
+ *
+ * これは**仮の組み方**。実際の紙のテストに合わせて並べ直すときは、
+ * アプリ側で floors と reqs を手で書けばよい（倍の見方がその形）。
+ */
+export declare function floorsFromTestSteps(steps: readonly TestStepLike[], opts?: {
+    maxFloors?: number;
+    minFloors?: number;
+}): TrialPlan;
 //# sourceMappingURL=index.d.ts.map
