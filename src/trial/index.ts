@@ -321,3 +321,82 @@ export async function syncTrialsFromServer(config: TrialSyncConfig): Promise<Tri
     return local;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 本番テストから 層を組む                                              */
+/* ------------------------------------------------------------------ */
+
+/** 層の見出し（第Ⅰ層…）。層の数が10を超えることは想定しない */
+export const NUMERALS = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ', 'Ⅹ'] as const;
+
+/** 突破した層の数 → 子どもの画面の名前。0 は「第Ⅰ層に挑戦中」、全層なら神座 */
+export function floorName(cleared: number, floors: number): string {
+  if (cleared >= floors) return '神座';
+  if (cleared <= 0) return '第Ⅰ層に挑戦中';
+  return `第${NUMERALS[cleared - 1] ?? cleared}層`;
+}
+
+/** 本番テストの設問の形（各アプリの TEST_STEPS がこの形を持っている） */
+export interface TestStepLike {
+  skillId: string;
+  points: number;
+  title: string;
+  section?: string;
+}
+
+export interface TrialPlan {
+  floors: TrialFloorDef[];
+  /** 本番テストの各設問が、何層まで突破していれば取れるか */
+  reqs: TestItemReq[];
+  /** 予想点の満点（点のある設問の合計） */
+  max: number;
+}
+
+/** 見出しから（…）の補足を落として短くする */
+const shortTitle = (t: string) => t.replace(/[（(][^）)]*[）)]\s*$/, '').trim() || t;
+
+/**
+ * アプリの本番テストの設問から、神域の試練の層を組む。
+ *
+ * **層の順は本番テストの設問の順**（表の大問1 → … → 裏）。本番テストは
+ * 基本から応用へ並んでいるので、そのまま「やさしい層から」になる。
+ * 同じモジュール（記号の前半）が続く項目は1つの層にまとめ（3つまで）、
+ * それでも maxFloors を超えるときは、項目の少ない となり同士を まとめる。
+ *
+ * これは**仮の組み方**。実際の紙のテストに合わせて並べ直すときは、
+ * アプリ側で floors と reqs を手で書けばよい（倍の見方がその形）。
+ */
+export function floorsFromTestSteps(
+  steps: readonly TestStepLike[],
+  opts: { maxFloors?: number; minFloors?: number } = {},
+): TrialPlan {
+  const maxFloors = opts.maxFloors ?? 8;
+  const scored = steps.filter((s) => s.points > 0);
+  const order: string[] = [];
+  for (const s of scored) if (!order.includes(s.skillId)) order.push(s.skillId);
+
+  let groups: string[][] = [];
+  for (const sk of order) {
+    const last = groups[groups.length - 1];
+    const prefix = sk.split('-')[0];
+    if (last && last.length < 3 && last[0]!.split('-')[0] === prefix) last.push(sk);
+    else groups.push([sk]);
+  }
+  while (groups.length > maxFloors) {
+    let at = 0;
+    for (let i = 1; i < groups.length - 1; i++) {
+      if (groups[i]!.length + groups[i + 1]!.length < groups[at]!.length + groups[at + 1]!.length) at = i;
+    }
+    groups = [...groups.slice(0, at), [...groups[at]!, ...groups[at + 1]!], ...groups.slice(at + 2)];
+  }
+
+  const titleOf = (sk: string) => shortTitle(scored.find((s) => s.skillId === sk)?.title ?? sk);
+  const floors: TrialFloorDef[] = groups.map((g) => {
+    const titles = [...new Set(g.map(titleOf))];
+    return { label: titles.slice(0, 2).join('・') + (titles.length > 2 ? ' ほか' : ''), skills: g };
+  });
+  const floorOf = new Map<string, number>();
+  groups.forEach((g, i) => g.forEach((sk) => floorOf.set(sk, i + 1)));
+  const reqs = scored.map((s) => ({ points: s.points, floor: floorOf.get(s.skillId) ?? floors.length }));
+  return { floors, reqs, max: reqs.reduce((a, r) => a + r.points, 0) };
+}

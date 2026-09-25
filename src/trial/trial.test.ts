@@ -94,3 +94,26 @@ test('サーバの記録と端末の記録を合わせる（同じ回は1つ）'
   assert.equal(m.length, 2);
   assert.equal(m.find((r) => r.ts === 5)!.sent, true);
 });
+
+test('本番テストから層を組む: 設問の順・同じモジュールはまとめる・予想点の対応', async () => {
+  const { floorsFromTestSteps, floorName } = await import('./index.js');
+  const steps = [
+    { skillId: 'meaning-man', points: 5, title: 'がい数の いみ（約何万）' },
+    { skillId: 'meaning-man', points: 5, title: 'がい数の いみ（約何万）' },
+    { skillId: 'round-place', points: 5, title: '四捨五入（千の位）' },
+    { skillId: 'round-digit2', points: 5, title: '上から2けたの がい数' },
+    { skillId: 'range-hundreds', points: 15, title: 'もとの数の はんい' },
+    { skillId: 'sumdiff-add', points: 10, title: 'たし算の 見積もり' },
+    { skillId: 'meaning-scene', points: 0, title: '参考' },
+  ];
+  const plan = floorsFromTestSteps(steps);
+  assert.deepEqual(plan.floors.map((f) => f.skills), [['meaning-man'], ['round-place', 'round-digit2'], ['range-hundreds'], ['sumdiff-add']]);
+  assert.equal(plan.floors[0]!.label, 'がい数の いみ');
+  assert.equal(plan.max, 45, '点のない参考問題は数えない');
+  assert.deepEqual(plan.reqs.map((r) => r.floor), [1, 1, 2, 2, 3, 4]);
+  const many = Array.from({ length: 12 }, (_, i) => ({ skillId: `m${i}-a`, points: 5, title: `t${i}` }));
+  assert.equal(floorsFromTestSteps(many).floors.length, 8, '多すぎるときは となり同士を まとめる');
+  assert.equal(floorName(0, 7), '第Ⅰ層に挑戦中');
+  assert.equal(floorName(3, 7), '第Ⅲ層');
+  assert.equal(floorName(7, 7), '神座');
+});
