@@ -5,6 +5,6 @@ export { JoinGate, JoinSettingsRow } from './JoinGate.js';
 export { ScratchPad, ScratchPadToggle } from './ScratchPad.js';
 export type { ScratchPadProps, ScratchOp } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';
-export { TrialScreen, TrialCard } from './TrialScreen.js';
+export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';
 export type { TrialScreenProps, TrialQuestionHandlers } from './TrialScreen.js';
 //# sourceMappingURL=index.d.ts.map

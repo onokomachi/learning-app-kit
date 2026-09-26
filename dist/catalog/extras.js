@@ -23,10 +23,10 @@ export const COMMON_EXTRA_MODULES = [
     },
     {
         module_id: 'trial',
-        title: '神域の試練',
+        title: '実力の階段',
         skills: [
-            k('trial-kyokugen', '神域の試練・極限', 'やさしい層から登り、どこまで確実にできるかを測る（1回ぶん）', 'trial'),
-            k('trial-mugen', '神域の試練・無限', '神座に届いた子が、まちがえるまで挑み続ける（1回ぶん）', 'trial'),
+            k('trial-kyokugen', '実力の階段・極限', 'やさしい段から登り、どこまで確実にできるかを測る（1回ぶん）', 'trial'),
+            k('trial-mugen', '実力の階段・無限', '頂点に届いた子が、単元のすべての項目で まちがえるまで挑み続ける（1回ぶん）', 'trial'),
         ],
     },
 ];

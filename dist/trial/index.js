@@ -1,12 +1,16 @@
 /**
- * 神域の試練（単元の中の実力チェック）の、画面に依存しない部分。
+ * 実力の階段（STEP TO 算数MASTER・単元の中の実力チェック）の、画面に依存しない部分。
+ *
+ * 画面に出す名前: 層→「段」、全層突破→「頂点」、刻印→「セーブ」。
+ * コードの中の名前（sealed・floor など）と、サーバの列名（刻印に数える など）はそのまま。
+ * 名前を変えるたびに記録の形まで変えると、過去の記録が読めなくなるため。
  *
  * 単元の技能を「層」に並べ、やさしい層から順に登らせて、どこまで確実に
  * できるかを測る。止まった層が、その子がいま取り組むべきところになる。
  *
  *   極限 … 各層2問。2問正解で突破、同じ層で2回まちがえたら止まる。
  *          2層続けてノーミスなら1層飛ばす（最後の層は必ず解かせる）。
- *   無限 … 神座（全層突破）に1度たどりついた子だけ。3回まちがえるまで続く。
+ *   無限 … 頂点（全段突破）に1度たどりついた子だけ。3回まちがえるまで続く。
  *
  * 「一度の成功でその子の実力と決めない」ために、到達と刻印を分ける。
  *   今の層 … いちばん新しい極限の結果。下がることもある
@@ -42,7 +46,7 @@ export function answerClimb(s, skillId, correct) {
     let next = s.at + 1;
     const skipped = [...s.skipped];
     let perfectRun = perfect;
-    // 2層続けてノーミスなら1層飛ばす。ただし最後の層は飛ばさない（神座は必ず解いて届く）
+    // 2層続けてノーミスなら1層飛ばす。ただし最後の層は飛ばさない（頂点は必ず解いて届く）
     if (perfect >= 2 && next + 1 <= s.floors - 1) {
         skipped.push(next);
         next += 1;
@@ -177,7 +181,7 @@ export async function flushTrials(config) {
                     event_id: r.eventId,
                     skill_id: r.mode === '極限' ? 'trial-kyokugen' : 'trial-mugen',
                     module_id: 'trial',
-                    label: r.mode === '極限' ? `神域の試練・極限 ${r.floor}/${r.floors}層` : `神域の試練・無限 ${r.score}`,
+                    label: r.mode === '極限' ? `実力の階段・極限 ${r.floor}/${r.floors}段` : `実力の階段・無限 ${r.score}`,
                     correct: r.floor >= r.floors,
                     ts: r.ts,
                     detail: {
@@ -243,20 +247,49 @@ export async function syncTrialsFromServer(config) {
 /* ------------------------------------------------------------------ */
 /* 本番テストから 層を組む                                              */
 /* ------------------------------------------------------------------ */
-/** 層の見出し（第Ⅰ層…）。層の数が10を超えることは想定しない */
+/** 以前の見出し（第Ⅰ層…）。いまの画面は算用数字の「第3段」を使う（小4でも読める） */
 export const NUMERALS = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ', 'Ⅹ'];
-/** 突破した層の数 → 子どもの画面の名前。0 は「第Ⅰ層に挑戦中」、全層なら神座 */
+/** 画面に出す名前 */
+export const TRIAL_NAME = '実力の階段';
+export const TRIAL_SUBTITLE = 'STEP TO 算数MASTER';
+/** 刻印（ソロで最後まで・通算3回）の画面での呼び名 */
+export const SAVE_NAME = 'セーブ';
+/** 突破した段の数 → 子どもの画面の名前。0 は「第1段に挑戦中」、全段なら頂点 */
 export function floorName(cleared, floors) {
     if (cleared >= floors)
-        return '神座';
+        return '頂点';
     if (cleared <= 0)
-        return '第Ⅰ層に挑戦中';
-    return `第${NUMERALS[cleared - 1] ?? cleared}層`;
+        return '第1段に挑戦中';
+    return `第${cleared}段`;
+}
+/**
+ * 無限で出す段。本番テストに出ない項目（extra）も、同じモジュール（記号の前半）の段に混ぜる。
+ * 同じモジュールの段が無い項目は、最後に「そのほかの項目」の段としてまとめる。
+ *
+ * 極限はテストの範囲のまま（テスト予想を正直に保つ）。頂点に届いた子は、無限で
+ * 単元のすべての項目に挑める。
+ */
+export function withExtraSkills(floors, extra) {
+    const out = floors.map((f) => ({ label: f.label, skills: [...f.skills] }));
+    const rest = [];
+    const prefix = (s) => s.split('-')[0];
+    for (const sk of extra) {
+        if (out.some((f) => f.skills.includes(sk)))
+            continue;
+        const at = out.findIndex((f) => f.skills.some((x) => prefix(x) === prefix(sk)));
+        if (at >= 0)
+            out[at].skills.push(sk);
+        else
+            rest.push(sk);
+    }
+    if (rest.length)
+        out.push({ label: 'そのほかの項目', skills: rest });
+    return out;
 }
 /** 見出しから（…）の補足を落として短くする */
 const shortTitle = (t) => t.replace(/[（(][^）)]*[）)]\s*$/, '').trim() || t;
 /**
- * アプリの本番テストの設問から、神域の試練の層を組む。
+ * アプリの本番テストの設問から、実力の階段の段を組む。
  *
  * **層の順は本番テストの設問の順**（表の大問1 → … → 裏）。本番テストは
  * 基本から応用へ並んでいるので、そのまま「やさしい層から」になる。
