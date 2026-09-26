@@ -107,7 +107,7 @@ export function setPlayMode(mode: PlayMode, now: number = Date.now()): void {
 }
 
 /**
- * 実力を測る場面（本番テスト・神域の試練など）に入るときに呼ぶ。
+ * 実力を測る場面（本番テスト・実力の階段など）に入るときに呼ぶ。
  * ペアのままなら、ここでソロに切り替える。
  */
 export function forceSolo(now: number = Date.now()): boolean {

@@ -17,7 +17,7 @@ export declare function needsPlayModeAsk(now?: number): boolean;
  */
 export declare function setPlayMode(mode: PlayMode, now?: number): void;
 /**
- * 実力を測る場面（本番テスト・神域の試練など）に入るときに呼ぶ。
+ * 実力を測る場面（本番テスト・実力の階段など）に入るときに呼ぶ。
  * ペアのままなら、ここでソロに切り替える。
  */
 export declare function forceSolo(now?: number): boolean;

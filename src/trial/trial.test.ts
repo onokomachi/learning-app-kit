@@ -113,7 +113,16 @@ test('本番テストから層を組む: 設問の順・同じモジュールは
   assert.deepEqual(plan.reqs.map((r) => r.floor), [1, 1, 2, 2, 3, 4]);
   const many = Array.from({ length: 12 }, (_, i) => ({ skillId: `m${i}-a`, points: 5, title: `t${i}` }));
   assert.equal(floorsFromTestSteps(many).floors.length, 8, '多すぎるときは となり同士を まとめる');
-  assert.equal(floorName(0, 7), '第Ⅰ層に挑戦中');
-  assert.equal(floorName(3, 7), '第Ⅲ層');
-  assert.equal(floorName(7, 7), '神座');
+  assert.equal(floorName(0, 7), '第1段に挑戦中');
+  assert.equal(floorName(3, 7), '第3段');
+  assert.equal(floorName(7, 7), '頂点');
+});
+
+test('無限の段: テストに出ない項目を 同じモジュールの段に混ぜ、無いものは最後にまとめる', async () => {
+  const { withExtraSkills } = await import('./index.js');
+  const floors = [{ label: 'a', skills: ['round-place'] }, { label: 'b', skills: ['sum-add'] }];
+  const out = withExtraSkills(floors, ['round-digit1', 'range-tens', 'sum-add']);
+  assert.deepEqual(out.map((f) => f.skills), [['round-place', 'round-digit1'], ['sum-add'], ['range-tens']]);
+  assert.equal(out[2]!.label, 'そのほかの項目');
+  assert.deepEqual(floors[0]!.skills, ['round-place'], 'もとの段は書きかえない');
 });

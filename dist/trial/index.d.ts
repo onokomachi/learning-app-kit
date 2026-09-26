@@ -23,7 +23,7 @@ export interface ClimbState {
     misses: number;
     /** ノーミスで突破した層が、いま何層続いているか */
     perfectRun: number;
-    /** 突破した層の数（0〜floors）。floors なら神座 */
+    /** 突破した段の数（0〜floors）。floors なら頂点 */
     cleared: number;
     skipped: number[];
     done: boolean;
@@ -109,10 +109,23 @@ export declare function saveTrial(config: TrialSyncConfig, rec: Omit<TrialRecord
  * 学級コードを入れていない子（studentId が無い）は端末の記録だけを返す。
  */
 export declare function syncTrialsFromServer(config: TrialSyncConfig): Promise<TrialRecord[]>;
-/** 層の見出し（第Ⅰ層…）。層の数が10を超えることは想定しない */
+/** 以前の見出し（第Ⅰ層…）。いまの画面は算用数字の「第3段」を使う（小4でも読める） */
 export declare const NUMERALS: readonly ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"];
-/** 突破した層の数 → 子どもの画面の名前。0 は「第Ⅰ層に挑戦中」、全層なら神座 */
+/** 画面に出す名前 */
+export declare const TRIAL_NAME = "\u5B9F\u529B\u306E\u968E\u6BB5";
+export declare const TRIAL_SUBTITLE = "STEP TO \u7B97\u6570MASTER";
+/** 刻印（ソロで最後まで・通算3回）の画面での呼び名 */
+export declare const SAVE_NAME = "\u30BB\u30FC\u30D6";
+/** 突破した段の数 → 子どもの画面の名前。0 は「第1段に挑戦中」、全段なら頂点 */
 export declare function floorName(cleared: number, floors: number): string;
+/**
+ * 無限で出す段。本番テストに出ない項目（extra）も、同じモジュール（記号の前半）の段に混ぜる。
+ * 同じモジュールの段が無い項目は、最後に「そのほかの項目」の段としてまとめる。
+ *
+ * 極限はテストの範囲のまま（テスト予想を正直に保つ）。頂点に届いた子は、無限で
+ * 単元のすべての項目に挑める。
+ */
+export declare function withExtraSkills(floors: readonly TrialFloorDef[], extra: readonly string[]): TrialFloorDef[];
 /** 本番テストの設問の形（各アプリの TEST_STEPS がこの形を持っている） */
 export interface TestStepLike {
     skillId: string;
@@ -128,7 +141,7 @@ export interface TrialPlan {
     max: number;
 }
 /**
- * アプリの本番テストの設問から、神域の試練の層を組む。
+ * アプリの本番テストの設問から、実力の階段の段を組む。
  *
  * **層の順は本番テストの設問の順**（表の大問1 → … → 裏）。本番テストは
  * 基本から応用へ並んでいるので、そのまま「やさしい層から」になる。
