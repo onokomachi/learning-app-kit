@@ -10,11 +10,17 @@
  *
  *   極限 … 各層2問。2問正解で突破、同じ層で2回まちがえたら止まる。
  *          2層続けてノーミスなら1層飛ばす（最後の層は必ず解かせる）。
- *   無限 … 頂点（全段突破）に1度たどりついた子だけ。3回まちがえるまで続く。
+ *   無限 … 最初から だれでも挑める。3回まちがえるまで続く。
+ *          連続正解（COMBO）でランクが上がる（RANKS）。まちがえると連続は0に戻るが、
+ *          その回に上がったランクは下がらない。単元ごとの自己最高ランクは消えない。
  *
  * 「一度の成功でその子の実力と決めない」ために、到達と刻印を分ける。
  *   今の層 … いちばん新しい極限の結果。下がることもある
  *   刻印   … ソロで最後までやった極限のうち、その層以上に届いた回が通算3回あれば付く
+ *            （頂点に届いた回は、その下の全部の段の回数にも入る。上下しても届いた段は数え続ける）
+ *
+ * 極限はセーブした段の次から始めることもできる（startClimb の from）。
+ * そのときセーブ以下の段は、突破した扱いで記録する（3回届いて確かめ済みのため）。
  *
  * 結果は端末に保存し（自己ベストの表示用）、学級コードがあればサーバにも送る。
  * アプリの学習ログ（logs）には入れない——入れると熟達度や連続記録が動き、
@@ -46,6 +52,8 @@ export interface ClimbStep { floor: number; skillId: string; correct: boolean }
 
 export interface ClimbState {
   floors: number;
+  /** どの段から始めたか（突破済みとみなした段の数）。はじめからなら 0 */
+  start: number;
   /** 挑戦中の層（0始まり） */
   at: number;
   correct: number;
@@ -59,8 +67,13 @@ export interface ClimbState {
   history: ClimbStep[];
 }
 
-export function startClimb(floors: number): ClimbState {
-  return { floors, at: 0, correct: 0, misses: 0, perfectRun: 0, cleared: 0, skipped: [], done: false, history: [] };
+/**
+ * 極限を始める。from＝セーブ地点から始めるときの、突破済みとみなす段の数。
+ * 頂点までセーブしていても、最後の段は必ず解く（from は floors-1 まで）。
+ */
+export function startClimb(floors: number, from = 0): ClimbState {
+  const start = Math.max(0, Math.min(Math.floor(from), floors - 1));
+  return { floors, start, at: start, correct: 0, misses: 0, perfectRun: 0, cleared: start, skipped: [], done: false, history: [] };
 }
 
 export function answerClimb(s: ClimbState, skillId: string, correct: boolean): ClimbState {
@@ -103,18 +116,96 @@ export function pickClimbSkill(s: ClimbState, defs: readonly TrialFloorDef[], ra
 /* 無限                                                                 */
 /* ------------------------------------------------------------------ */
 
-export interface EndlessState { score: number; misses: number; done: boolean; history: ClimbStep[] }
+export interface EndlessState {
+  score: number;
+  misses: number;
+  /** いまの連続正解（COMBO）。まちがえると0に戻る */
+  streak: number;
+  /** この回の最高連続正解。ランクはこれで決まる（下がらない） */
+  bestStreak: number;
+  done: boolean;
+  history: ClimbStep[];
+}
 
 export function startEndless(): EndlessState {
-  return { score: 0, misses: 0, done: false, history: [] };
+  return { score: 0, misses: 0, streak: 0, bestStreak: 0, done: false, history: [] };
 }
 
 export function answerEndless(s: EndlessState, floor: number, skillId: string, correct: boolean): EndlessState {
   if (s.done) return s;
   const history = [...s.history, { floor, skillId, correct }];
-  if (correct) return { ...s, history, score: s.score + 1 };
+  if (correct) {
+    const streak = s.streak + 1;
+    return { ...s, history, score: s.score + 1, streak, bestStreak: Math.max(s.bestStreak, streak) };
+  }
   const misses = s.misses + 1;
-  return { ...s, history, misses, done: misses >= ENDLESS_MISSES };
+  return { ...s, history, misses, streak: 0, done: misses >= ENDLESS_MISSES };
+}
+
+/* ------------------------------------------------------------------ */
+/* 無限のランク（連続正解で上がる）                                      */
+/* ------------------------------------------------------------------ */
+
+/** ランクの世界。色は画面のネオンの色 */
+export interface RankWorld { code: string; label: string; color: string }
+
+export const RANK_WORLDS = {
+  SCHOOL: { code: 'SCHOOL', label: 'がっこう', color: '#22e7ff' },
+  FIGHTER: { code: 'FIGHTER', label: 'かくとう', color: '#3dff9a' },
+  SAMURAI: { code: 'SAMURAI', label: 'さむらい', color: '#ffe24a' },
+  MAGIC: { code: 'MAGIC', label: 'まほう', color: '#c77dff' },
+  SCHOLAR: { code: 'SCHOLAR', label: 'がくしゃ', color: '#4d8dff' },
+  MACHINE: { code: 'MACHINE', label: 'マシン', color: '#ff9d2e' },
+  KING: { code: 'KING', label: 'おう', color: '#ff4d6d' },
+  LEGEND: { code: 'LEGEND', label: 'でんせつ', color: '#fff4c2' },
+} as const satisfies Record<string, RankWorld>;
+
+export interface RankDef {
+  /** このランクになる連続正解の数 */
+  min: number;
+  name: string;
+  world: RankWorld;
+  /** 1始まりの順番 */
+  level: number;
+}
+
+const W = RANK_WORLDS;
+const RANK_TABLE: [number, string, RankWorld][] = [
+  [1, '算数ルーキー', W.SCHOOL], [2, '算数小学生', W.SCHOOL], [3, '算数中学生', W.SCHOOL],
+  [4, '算数ハイスクール', W.SCHOOL], [5, '算数フレッシュマン', W.SCHOOL],
+  [6, '算数ワッショイ', W.FIGHTER], [7, '算数格闘家', W.FIGHTER], [8, '算数空手家', W.FIGHTER],
+  [9, '算数柔道家', W.FIGHTER], [10, '算数マン＆ガール', W.FIGHTER],
+  [12, '算数警察官', W.SAMURAI], [14, '算数戦士', W.SAMURAI], [16, '算数剣士', W.SAMURAI],
+  [18, '算数SAMURAI', W.SAMURAI], [20, '算数将軍', W.SAMURAI],
+  [23, '算数マジシャン', W.MAGIC], [26, '算数魔法使い', W.MAGIC], [29, '算数白魔導士', W.MAGIC],
+  [32, '算数黒魔導士', W.MAGIC], [35, '算数錬金術師', W.MAGIC],
+  [39, '算数博士の弟子', W.SCHOLAR], [43, '算数名探偵', W.SCHOLAR], [47, '算数賢者', W.SCHOLAR],
+  [51, '秀才数学者', W.SCHOLAR], [55, '天才数学者', W.SCHOLAR],
+  [60, '電卓', W.MACHINE], [65, 'パソコン', W.MACHINE], [70, 'スマホ', W.MACHINE],
+  [75, 'スーパーコンピュータ', W.MACHINE], [80, '量子コンピュータ', W.MACHINE],
+  [82, '算数大臣', W.KING], [84, '超算数大臣', W.KING], [86, '超時空算数大臣', W.KING],
+  [88, '算数王', W.KING], [90, '算数帝王', W.KING],
+  [93, '伝説の算数王', W.LEGEND], [96, '算数魔王', W.LEGEND], [100, '算数MASTER', W.LEGEND],
+];
+
+/**
+ * ランク（38段）。連続正解の数で決まる。最初の10段は1問ごと、上に行くほど間があく。
+ * 100連続で いちばん上の「算数MASTER」（副題 STEP TO 算数MASTER のゴール）。
+ * もとは先生が中学校で自主学習の記録に使っていた称号を、小学生向けに直したもの。
+ */
+export const RANKS: readonly RankDef[] = RANK_TABLE.map(([min, name, world], i) => ({ min, name, world, level: i + 1 }));
+
+/** 連続正解 n 回で なっているランク。1回も正解していなければ null */
+export function rankOf(streak: number): RankDef | null {
+  let r: RankDef | null = null;
+  for (const d of RANKS) if (streak >= d.min) r = d;
+  return r;
+}
+
+/** 次のランクと、あと何問の連続正解が要るか（いまの連続から）。いちばん上なら null */
+export function nextRankOf(bestStreak: number, streak = bestStreak): { rank: RankDef; need: number } | null {
+  const next = RANKS.find((d) => d.min > bestStreak);
+  return next ? { rank: next, need: next.min - streak } : null;
 }
 
 /**
@@ -143,6 +234,10 @@ export interface TrialRecord {
   score: number;
   /** ソロで最後までやった回か。刻印に数えるのはこの回だけ */
   soloComplete: boolean;
+  /** 無限: この回の最高連続正解（ランクのもと） */
+  bestStreak?: number;
+  /** 極限: セーブ地点から始めた回の、突破済みとみなした段の数（はじめからなら 0） */
+  start?: number;
   /** サーバに送れたか（端末の記録だけに使う） */
   sent?: boolean;
 }
@@ -154,10 +249,18 @@ export interface TrialSummary {
   best: number;
   /** 刻印のある、いちばん高い層（0なら刻印なし） */
   sealed: number;
-  /** 次に刻印を目指す層と、そこへ届いた回数（ソロで最後まで） */
+  /**
+   * いちばん近いセーブ: セーブより上で、届いた回数がいちばん多い段（同じなら高い段）と、その回数。
+   * 例）第4段と頂点に1回ずつ届いた → 第1〜4段は2回・第5段〜頂点は1回 → 第4段 2/3
+   */
   nextSeal: { floor: number; count: number } | null;
+  /** 段ごとの、届いた回数（ソロで最後まで）。[k-1] が「第k段以上に届いた回」 */
+  reachCounts: number[];
+  /** 頂点に届いたことがあるか（以前は無限の解放条件。いまは無限は最初から開いている） */
   endlessUnlocked: boolean;
   endlessBest: number;
+  /** 無限の最高連続正解（自己最高ランクのもと） */
+  endlessBestStreak: number;
   runs: number;
 }
 
@@ -170,18 +273,28 @@ export function summarize(records: readonly TrialRecord[], floors: number): Tria
     if (reachedAtLeast(k) >= SEAL_COUNT) { sealed = k; break; }
   }
   const best = climbs.reduce((m, r) => Math.max(m, r.floor), 0);
-  // 刻印の次の目標は「刻印より上で、いちばん高く届いた層」。まだ届いていなければ刻印の1つ上
-  const target = Math.max(best, sealed + 1);
-  const nextSeal = sealed >= floors ? null
-    : { floor: Math.min(target, floors), count: reachedAtLeast(Math.min(target, floors)) };
+  const reachCounts = Array.from({ length: floors }, (_, i) => reachedAtLeast(i + 1));
+  // いちばん近いセーブ: セーブより上で回数がいちばん多い段（同じなら高い段）。
+  // 「いちばん高く届いた段」を目標にすると、頂点に1回届いただけで「頂点 1/3」になり、
+  // 2回届いている下の段が見えなくなる（実際に先生のテストプレイでそう見えた）
+  let nextSeal: { floor: number; count: number } | null = null;
+  if (sealed < floors) {
+    nextSeal = { floor: sealed + 1, count: reachedAtLeast(sealed + 1) };
+    for (let k = sealed + 1; k <= floors; k++) {
+      const c = reachedAtLeast(k);
+      if (c > 0 && c >= nextSeal.count) nextSeal = { floor: k, count: c };
+    }
+  }
   const endless = records.filter((r) => r.mode === '無限');
   return {
     current: climbs.length ? climbs[climbs.length - 1]!.floor : null,
     best,
     sealed,
-    nextSeal: nextSeal && nextSeal.floor > sealed ? nextSeal : null,
+    nextSeal,
+    reachCounts,
     endlessUnlocked: best >= floors,
     endlessBest: endless.reduce((m, r) => Math.max(m, r.score), 0),
+    endlessBestStreak: endless.reduce((m, r) => Math.max(m, r.bestStreak ?? 0), 0),
     runs: climbs.length,
   };
 }
@@ -263,12 +376,13 @@ export async function flushTrials(config: TrialSyncConfig): Promise<number> {
           event_id: r.eventId,
           skill_id: r.mode === '極限' ? 'trial-kyokugen' : 'trial-mugen',
           module_id: 'trial',
-          label: r.mode === '極限' ? `実力の階段・極限 ${r.floor}/${r.floors}段` : `実力の階段・無限 ${r.score}`,
+          label: r.mode === '極限' ? `実力の階段・極限 ${r.floor}/${r.floors}段` : `実力の階段・無限 ${r.score}（最高連続${r.bestStreak ?? 0}）`,
           correct: r.floor >= r.floors,
           ts: r.ts,
           detail: {
             kind: 'trial', mode: r.mode, floor: r.floor, floors: r.floors,
             score: r.score, soloComplete: r.soloComplete,
+            bestStreak: r.bestStreak ?? 0, start: r.start ?? 0,
           },
         })),
       }),
@@ -313,10 +427,12 @@ export async function syncTrialsFromServer(config: TrialSyncConfig): Promise<Tri
     if (!res.ok) return local;
     const rows = (await res.json()) as {
       mode: TrialMode; floor: number; floors: number; score: number; solo_complete: boolean; ts: number; event_id: string;
+      best_streak?: number; start_floor?: number;
     }[];
     const remote: TrialRecord[] = rows.map((r) => ({
       eventId: r.event_id, ts: Number(r.ts), mode: r.mode, floor: r.floor, floors: r.floors,
       score: r.score, soloComplete: r.solo_complete, sent: true,
+      bestStreak: Number(r.best_streak ?? 0) || 0, start: Number(r.start_floor ?? 0) || 0,
     }));
     const merged = mergeTrials(local, remote);
     saveAll(config.appId, merged);

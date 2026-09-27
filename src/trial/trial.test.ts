@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
-  summarize, predictScore, nextGain, mergeTrials, type TrialRecord, type TrialFloorDef,
+  summarize, predictScore, nextGain, mergeTrials, RANKS, rankOf, nextRankOf,
+  type TrialRecord, type TrialFloorDef,
 } from './index.js';
 
 const run = (answers: boolean[], floors = 7) =>
@@ -75,7 +76,7 @@ test('今の層は下がることもある（最新の結果をそのまま映�
   assert.equal(s.sealed, 5, '刻印は消えない');
 });
 
-test('無限は神座に1度届いたら解放。記録は最高値', () => {
+test('頂点に届いたかと、無限の記録（最高値）', () => {
   const s = summarize([rec(7, 1), rec(0, 2, { mode: '無限', score: 12 }), rec(0, 3, { mode: '無限', score: 8 })], 7);
   assert.equal(s.endlessUnlocked, true);
   assert.equal(s.endlessBest, 12);
@@ -125,4 +126,51 @@ test('無限の段: テストに出ない項目を 同じモジュールの段�
   assert.deepEqual(out.map((f) => f.skills), [['round-place', 'round-digit1'], ['sum-add'], ['range-tens']]);
   assert.equal(out[2]!.label, 'そのほかの項目');
   assert.deepEqual(floors[0]!.skills, ['round-place'], 'もとの段は書きかえない');
+});
+
+test('セーブ: 頂点に届いた回は下の段にも数える。いちばん近いセーブは回数の多い段', () => {
+  // 第4段まで → 頂点。第1〜4段は2回、第5段〜頂点は1回
+  const s = summarize([rec(4, 1), rec(7, 2)], 7);
+  assert.deepEqual(s.reachCounts, [2, 2, 2, 2, 1, 1, 1]);
+  assert.equal(s.sealed, 0);
+  assert.deepEqual(s.nextSeal, { floor: 4, count: 2 }, '頂点 1/3 ではなく 第4段 2/3');
+  const t = summarize([rec(4, 1), rec(7, 2), rec(3, 3)], 7);
+  assert.equal(t.sealed, 3);
+  assert.deepEqual(t.nextSeal, { floor: 4, count: 2 });
+  assert.equal(summarize([], 7).nextSeal!.count, 0);
+  assert.equal(summarize([rec(7, 1), rec(7, 2), rec(7, 3)], 7).nextSeal, null, '頂点をセーブ済み');
+});
+
+test('極限: セーブ地点から始める。止まってもセーブ以下は突破した扱い', () => {
+  const s = startClimb(7, 3);
+  assert.equal(s.at, 3); assert.equal(s.cleared, 3); assert.equal(s.start, 3);
+  const stop = [false, false].reduce((x, c) => answerClimb(x, 'k', c), s);
+  assert.equal(stop.done, true); assert.equal(stop.cleared, 3);
+  const up = [true, true].reduce((x, c) => answerClimb(x, 'k', c), s);
+  assert.equal(up.cleared, 4);
+  assert.equal(startClimb(7, 7).at, 6, '頂点をセーブしていても最後の段は解く');
+  assert.equal(startClimb(7).start, 0);
+});
+
+test('無限: 連続正解はミスで0に戻るが、最高連続は残る', () => {
+  let s = startEndless();
+  for (const c of [true, true, true, false, true]) s = answerEndless(s, 0, 'k', c);
+  assert.equal(s.streak, 1); assert.equal(s.bestStreak, 3); assert.equal(s.score, 4);
+  const t = summarize([rec(0, 1, { mode: '無限', score: 20, bestStreak: 9 }), rec(0, 2, { mode: '無限', score: 5, bestStreak: 5 })], 7);
+  assert.equal(t.endlessBestStreak, 9);
+});
+
+test('ランク: 38段・連続正解で決まる・100連続で算数MASTER', () => {
+  assert.equal(RANKS.length, 38);
+  for (let i = 1; i < RANKS.length; i++) assert.ok(RANKS[i]!.min > RANKS[i - 1]!.min, '連続数は増えていく');
+  assert.equal(rankOf(0), null);
+  assert.equal(rankOf(1)!.name, '算数ルーキー');
+  assert.equal(rankOf(11)!.name, '算数マン＆ガール');
+  assert.equal(rankOf(12)!.name, '算数警察官');
+  assert.equal(rankOf(99)!.name, '算数魔王');
+  assert.equal(rankOf(100)!.name, '算数MASTER');
+  assert.equal(rankOf(250)!.level, 38);
+  assert.deepEqual(nextRankOf(10, 10), { rank: RANKS[10], need: 2 });
+  assert.equal(nextRankOf(12, 0)!.need, 14, 'ミスのあとは、いまの連続から数える');
+  assert.equal(nextRankOf(100), null);
 });
