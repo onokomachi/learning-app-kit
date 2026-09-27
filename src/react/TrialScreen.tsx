@@ -2,7 +2,9 @@
  * 実力の階段（STEP TO 算数MASTER）の画面。どの算数アプリでも同じ見た目・同じ決まり。
  *
  *   極限 … やさしい段から登る。各段2問、同じ段で2回まちがえたら止まる。範囲は本番テストと同じ
- *   無限 … 頂点に1度たどりついた子だけ。単元のすべての項目で、3回まちがえるまで挑み続ける
+ *          セーブした段があれば「セーブ地点から」「はじめから」を選べる（最初はセーブ地点から）
+ *   無限 … 最初から だれでも。単元のすべての項目で、3回まちがえるまで挑み続ける。
+ *          連続正解でランク（38段・100連続で算数MASTER）が上がる。ランクはその回の中で下がらない
  *
  * アプリが渡すのは「段（どの項目を出すか）」「本番テストとの対応」と、
  * 1問を作る関数・出す関数だけ。問題は**練習・本番テストと同じ画面**で出す。
@@ -19,9 +21,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
   summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials,
-  floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME,
+  floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf,
   SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR,
-  type ClimbState, type EndlessState, type TrialRecord, type TrialFloorDef, type TestItemReq, type TrialSummary,
+  type ClimbState, type EndlessState, type TrialRecord, type TrialFloorDef, type TestItemReq, type TrialSummary, type RankDef,
 } from '../trial/index.js';
 import { forceSolo } from '../sync/playMode.js';
 
@@ -97,7 +99,7 @@ export interface TrialScreenProps<Q> {
 }
 
 type Phase = 'HOME' | 'CLIMB' | 'ENDLESS' | 'RESULT';
-type Flash = { kind: 'ok' | 'ng' | 'clear'; text: string } | null;
+type Flash = { kind: 'ok' | 'ng' | 'clear'; text: string } | { kind: 'rank'; rank: RankDef } | null;
 
 const stepName = (i: number, F: number) => (i >= F ? 'EXTRA' : `第${i + 1}段`);
 
@@ -121,6 +123,8 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
   const [soloNotice, setSoloNotice] = useState(false);
   const [last, setLast] = useState<TrialRecord | null>(null);
   const [prev, setPrev] = useState<TrialSummary | null>(null);
+  /** セーブ地点から始めるか（セーブがあるときだけ選べる。最初はセーブ地点から） */
+  const [fromSave, setFromSave] = useState(true);
   const locked = useRef(false);
   const keyRef = useRef(0);
 
@@ -138,13 +142,15 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
     setQ({ floor, skillId, data: generate(skillId, floor), key: keyRef.current });
   };
 
+  const startFrom = fromSave ? sum.sealed : 0;
+
   const begin = (mode: '極限' | '無限') => {
     if (forceSolo()) { setSoloNotice(true); setTimeout(() => setSoloNotice(false), 2600); }
     setPrev(sum); setFlash(null);
     if (mode === '極限') {
-      const s = startClimb(F);
+      const s = startClimb(F, startFrom);
       setClimb(s); setEndless(null); setPhase('CLIMB');
-      ask(0, pickClimbSkill(s, floors));
+      ask(s.at, pickClimbSkill(s, floors));
     } else {
       const s = startEndless();
       setEndless(s); setClimb(null); setPhase('ENDLESS');
@@ -153,8 +159,8 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
     }
   };
 
-  const finish = async (mode: '極限' | '無限', cleared: number, score: number) => {
-    const rec = await saveTrial(sync, { mode, floor: cleared, floors: F, score, soloComplete: true });
+  const finish = async (mode: '極限' | '無限', cleared: number, score: number, extra: { bestStreak?: number; start?: number } = {}) => {
+    const rec = await saveTrial(sync, { mode, floor: cleared, floors: F, score, soloComplete: true, ...extra });
     setLast(rec);
     setRecords(loadTrials(appId));
     setPhase('RESULT');
@@ -178,7 +184,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
       );
       setTimeout(() => {
         setFlash(null);
-        if (next.done) { void finish('極限', next.cleared, 0); return; }
+        if (next.done) { void finish('極限', next.cleared, 0, { start: next.start }); return; }
         ask(next.at, pickClimbSkill(next, floors));
       }, clearedNow ? 1100 : 650);
       return;
@@ -186,13 +192,17 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
     if (phase === 'ENDLESS' && endless) {
       const next = answerEndless(endless, q.floor, q.skillId, correct);
       setEndless(next);
-      setFlash({ kind: correct ? 'ok' : 'ng', text: correct ? `+1　${next.score}` : 'ミス' });
+      // ランクが上がった瞬間だけ大きく出す（その回の最高連続が しきい値を こえたとき）
+      const up = next.bestStreak > endless.bestStreak ? rankOf(next.bestStreak) : null;
+      const rankUp = up && up.min === next.bestStreak ? up : null;
+      setFlash(rankUp ? { kind: 'rank', rank: rankUp }
+        : { kind: correct ? 'ok' : 'ng', text: correct ? `${next.streak} COMBO` : 'ミス ── 連続は 0 から' });
       setTimeout(() => {
         setFlash(null);
-        if (next.done) { void finish('無限', F, next.score); return; }
+        if (next.done) { void finish('無限', F, next.score, { bestStreak: next.bestStreak }); return; }
         const n = pickEndless(next, endlessFloors);
         ask(n.floor, n.skillId);
-      }, 650);
+      }, rankUp ? 1400 : 650);
     }
   };
 
@@ -208,13 +218,17 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
         <Status sum={sum} ctx={ctx} />
         <Stairs sum={sum} ctx={ctx} />
         <Effort records={records} sum={sum} F={F} />
+        <RankPanel bestStreak={sum.endlessBestStreak} />
         <div style={{ display: 'grid', gap: 12, marginTop: 22 }}>
+          {sum.sealed > 0 && <StartChoice fromSave={fromSave} onChange={setFromSave} sealed={sum.sealed} F={F} />}
           <ModeButton code="LIMIT" title="極限" tone={CYAN}
-            sub="やさしい段から登り、どこまで確実にできるかを測る（10分ほど）" onClick={() => begin('極限')} />
-          <ModeButton code="INFINITY" title="無限" tone={CYAN} disabled={!sum.endlessUnlocked}
-            sub={sum.endlessUnlocked
-              ? `単元の すべての項目で、まちがえるまで挑み続ける（${ENDLESS_MISSES}回ミスで終了）　最高 ${sum.endlessBest}`
-              : '極限で 頂点に たどりつくと 解放される'}
+            sub={startFrom > 0
+              ? `${SAVE_NAME}地点（第${Math.min(startFrom, F - 1) + 1}段）から登り、どこまで確実にできるかを測る`
+              : 'やさしい段から登り、どこまで確実にできるかを測る（10分ほど）'}
+            onClick={() => begin('極限')} />
+          <ModeButton code="INFINITY" title="無限" tone={CYAN}
+            sub={`連続正解で ランクが上がる。単元の すべての項目で、${ENDLESS_MISSES}回まちがえるまで`
+              + (sum.endlessBestStreak > 0 ? `　自己最高 ${rankOf(sum.endlessBestStreak)!.name}` : '')}
             onClick={() => begin('無限')} />
         </div>
         <Rules />
@@ -255,7 +269,10 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
               </>
             ) : endless ? (
               <>
-                <span style={{ fontFamily: MONO, fontWeight: 900, color: CYAN, fontSize: 18 }}>{endless.score}</span>
+                <RankChip bestStreak={endless.bestStreak} />
+                <span title="いまの連続正解" style={{ fontFamily: MONO, fontWeight: 900, color: CYAN, fontSize: 18 }}>
+                  {endless.streak}<span style={{ fontFamily: DISPLAY, fontSize: 8, letterSpacing: '0.2em', marginLeft: 3 }}>COMBO</span>
+                </span>
                 <Pips label="ミス" n={endless.misses} max={ENDLESS_MISSES} color={RED} />
               </>
             ) : null}
@@ -263,13 +280,15 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
           </span>
         </div>
         {inClimb && <LightTrail climb={climb} F={F} />}
+        {endless && <NextRankBar streak={endless.streak} bestStreak={endless.bestStreak} />}
       </div>
       <div style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <div style={{ maxWidth: 1024, margin: '0 auto', padding: '20px 14px' }} key={q?.key}>
           {q && render(q.data, { onResult: (perfect) => settle(perfect), onMiss: () => settle(false) })}
         </div>
       </div>
-      {flash && (
+      {flash?.kind === 'rank' && <RankUp rank={flash.rank} />}
+      {flash && flash.kind !== 'rank' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
           <div style={{
             animation: 'lakPop 180ms ease-out', padding: '14px 30px', borderRadius: 8, fontWeight: 900, fontSize: 26,
@@ -355,7 +374,7 @@ function Status({ sum, ctx }: { sum: TrialSummary; ctx: Ctx }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
       <Stat code="NOW" label="今の段" value={sum.current === null ? '—' : floorName(sum.current, F)} sub="いちばん新しい 極限" color={CYAN} />
       <Stat code="SAVE" label={SAVE_NAME} value={sum.sealed ? floorName(sum.sealed, F) : 'なし'} color={ORANGE}
-        sub={sum.nextSeal ? `${floorName(sum.nextSeal.floor, F)}まで ${Math.min(sum.nextSeal.count, SEAL_COUNT)}/${SEAL_COUNT}` : '頂点を セーブ済み'} />
+        sub={sum.nextSeal ? `${floorName(sum.nextSeal.floor, F)} ${SAVE_NAME}まで ${Math.min(sum.nextSeal.count, SEAL_COUNT)}/${SEAL_COUNT}` : `頂点を ${SAVE_NAME}済み`} />
       <Stat code="SCORE" label="テスト予想" value={`${predicted}`} unit={`/${testMax}`} color={CYAN}
         sub={gain ? `${floorName(gain.floor, F)}を セーブで +${gain.gain}点` : 'これ以上は 上がらない'} />
       {sum.current !== null && todayPred !== predicted && (
@@ -406,6 +425,9 @@ function Stairs({ sum, ctx }: { sum: TrialSummary; ctx: Ctx }) {
         // 下の段ほど左、上の段ほど右から始めて「右上へのぼる」形にする
         const shift = (row / Math.max(1, n - 1)) * 34;
         const color = saved ? ORANGE : reached ? CYAN : FAINT;
+        // セーブまでの回数（●●○）。頂点の行は第F段と同じ回数なので出さない
+        const count = top || saved ? 0 : Math.min(sum.reachCounts[r.idx] ?? 0, SEAL_COUNT);
+        const nearest = !top && sum.nextSeal?.floor === r.idx + 1 && count > 0;
         return (
           <div key={r.name} style={{
             display: 'flex', alignItems: 'center', gap: 10, marginLeft: `${34 - shift}%`,
@@ -417,6 +439,15 @@ function Stairs({ sum, ctx }: { sum: TrialSummary; ctx: Ctx }) {
             <span style={{ width: 56, flexShrink: 0, fontWeight: 900, fontSize: 13, color, textShadow: saved || reached ? textGlow(`${color}55`) : undefined }}>{r.name}</span>
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700, color: reached ? DIM : FAINT }}>{r.label}</span>
             {saved && <span style={{ fontFamily: DISPLAY, fontSize: 9, fontWeight: 800, color: ORANGE, letterSpacing: '0.2em' }}>SAVE</span>}
+            {count > 0 && (
+              <span title={`${SAVE_NAME}まで ${count}/${SEAL_COUNT}`} aria-label={`${SAVE_NAME}まで ${count}/${SEAL_COUNT}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                {Array.from({ length: SEAL_COUNT }, (_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: 9, border: `1px solid ${ORANGE}`, background: i < count ? ORANGE : 'transparent', boxShadow: i < count ? glow(`${ORANGE}66`, 4) : undefined }} />
+                ))}
+                {nearest && <span style={{ fontSize: 10, fontWeight: 900, color: ORANGE, marginLeft: 3 }}>あと{SEAL_COUNT - count}回</span>}
+              </span>
+            )}
             {here && <span style={{ fontSize: 10, fontWeight: 900, color: CYAN, letterSpacing: '0.1em', animation: 'lakPulse 1.4s ease-in-out infinite' }}>▶いま</span>}
           </div>
         );
@@ -511,7 +542,9 @@ function Rules() {
       <p style={p}>・各段 {QUESTIONS_PER_FLOOR}問。ノーミスで解けた問題だけが 正解。同じ段で {MISSES_TO_STOP}回 まちがえたら そこで止まる。</p>
       <p style={p}>・2段つづけて ノーミスなら、次の段を 飛びこえる（最後の段は 必ず解く）。</p>
       <p style={p}>・その段まで 届いた回が 通算{SEAL_COUNT}回に なると「{SAVE_NAME}」。ひとりで 最後まで やった回だけ 数える。</p>
-      <p style={p}>・「今の段」は いちばん新しい結果。下がることも ある。{SAVE_NAME}は 消えない。</p>
+      <p style={p}>・上の段まで 届いた回は、その下の段の 回数にも 入る（●は {SAVE_NAME}までの 回数）。</p>
+      <p style={p}>・「今の段」は いちばん新しい結果。下がることも ある。{SAVE_NAME}は 消えない。{SAVE_NAME}地点から 始めることも できる。</p>
+      <p style={p}>・無限は 連続正解で ランクが 上がる（100連続で 算数MASTER）。まちがえると 連続は 0 に もどるが、ランクは 下がらない。</p>
     </div>
   );
 }
@@ -568,12 +601,34 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }: {
     }}>{text}</p>
   );
   if (last.mode === '無限') {
-    const best = prev ? last.score > prev.endlessBest : true;
+    const streak = last.bestStreak ?? 0;
+    const rank = rankOf(streak);
+    const prevBest = prev?.endlessBestStreak ?? 0;
+    const newRank = rank && (rankOf(prevBest)?.level ?? 0) < rank.level;
+    const c = rank?.world.color ?? CYAN;
+    const nx = nextRankOf(Math.max(streak, sum.endlessBestStreak));
     return (
       <div style={{ textAlign: 'center', marginTop: 24 }}>
-        <p style={{ fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }}>INFINITY</p>
-        <p style={{ fontFamily: MONO, fontSize: 64, fontWeight: 900, margin: '12px 0 0', color: INK, textShadow: textGlow('rgba(34,231,255,0.55)') }}>{last.score}</p>
-        <p style={{ color: DIM, fontWeight: 700, margin: '8px 0 0' }}>{best ? '自己ベスト 更新！' : `自己ベスト ${sum.endlessBest}`}</p>
+        <p style={{ fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }}>INFINITY ── RANK</p>
+        {rank ? (
+          <>
+            <p style={{ fontFamily: DISPLAY, fontSize: 10, letterSpacing: '0.3em', color: c, fontWeight: 800, margin: '18px 0 0' }}>
+              {rank.world.code}　LV.{rank.level}/{RANKS.length}
+            </p>
+            <p style={{ fontSize: 36, fontWeight: 900, margin: '6px 0 0', color: INK, textShadow: textGlow(`${c}aa`) }}>{rank.name}</p>
+          </>
+        ) : (
+          <p style={{ fontSize: 22, fontWeight: 900, margin: '18px 0 0', color: DIM }}>まだ ランクなし ── 1問 正解で 算数ルーキー</p>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 18 }}>
+          <div><p style={{ margin: 0, fontSize: 11, color: DIM, fontWeight: 800 }}>最高連続</p><p style={{ margin: 0, fontFamily: MONO, fontSize: 30, fontWeight: 900 }}>{streak}</p></div>
+          <div><p style={{ margin: 0, fontSize: 11, color: DIM, fontWeight: 800 }}>正解</p><p style={{ margin: 0, fontFamily: MONO, fontSize: 30, fontWeight: 900 }}>{last.score}</p></div>
+        </div>
+        {newRank && chip(c, '自己最高ランク 更新！')}
+        {!newRank && sum.endlessBestStreak > 0 && (
+          <p style={{ color: DIM, fontWeight: 700, margin: '12px 0 0' }}>自己最高ランク {rankOf(sum.endlessBestStreak)!.name}</p>
+        )}
+        {nx && <p style={{ color: DIM, fontWeight: 700, fontSize: 13, margin: '10px 0 0' }}>{nx.rank.min}連続で「{nx.rank.name}」</p>}
         <div style={{ marginTop: 32 }}>
           <button type="button" onClick={onRetry} style={bigBtn(CYAN_SOFT, INK, `1px solid ${CYAN}`)}>もう一度 挑む</button>
         </div>
@@ -592,11 +647,19 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }: {
         </p>
         {last.floor !== 0 && (
           <p style={{ color: DIM, fontWeight: 700, margin: '8px 0 0' }}>
-            {last.floor >= F ? '全段を 突破した。無限が ひらく。' : `第${last.floor + 1}段で ストップ ── ここが 次に きたえる場所`}
+            {last.floor >= F ? '全段を 突破した。' : `第${last.floor + 1}段で ストップ ── ここが 次に きたえる場所`}
           </p>
+        )}
+        {(last.start ?? 0) > 0 && (
+          <p style={{ color: FAINT, fontWeight: 700, fontSize: 12, margin: '6px 0 0' }}>{SAVE_NAME}地点（第{(last.start ?? 0) + 1}段）から スタート</p>
         )}
         {newBest && chip(CYAN, '自己最高 更新！')}
         {newSave && chip(ORANGE, `${floorName(sum.sealed, F)} を ${SAVE_NAME}した`)}
+        {!newSave && sum.nextSeal && sum.nextSeal.count > 0 && (
+          <p style={{ color: ORANGE, fontWeight: 900, margin: '12px 0 0' }}>
+            {floorName(sum.nextSeal.floor, F)} {SAVE_NAME}まで あと{SEAL_COUNT - Math.min(sum.nextSeal.count, SEAL_COUNT)}回
+          </p>
+        )}
       </div>
       <div style={{ marginTop: 24 }}><Status sum={sum} ctx={ctx} /></div>
       {stuck && (
@@ -620,6 +683,120 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }: {
   );
 }
 
+
+/* ---------------- セーブ地点から／はじめから ---------------- */
+function StartChoice({ fromSave, onChange, sealed, F }: { fromSave: boolean; onChange: (v: boolean) => void; sealed: number; F: number }) {
+  const opt = (on: boolean, v: boolean, title: string, sub: string) => (
+    <button type="button" aria-pressed={on} onClick={() => onChange(v)} style={{
+      flex: 1, padding: '9px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: FONT, textAlign: 'center',
+      border: `1px solid ${on ? (v ? ORANGE : CYAN) : LINE}`, color: on ? INK : DIM,
+      background: on ? (v ? ORANGE_SOFT : CYAN_SOFT) : 'rgba(1,3,7,0.6)',
+      boxShadow: on ? glow(`${v ? ORANGE : CYAN}33`, 8) : undefined,
+    }}>
+      <span style={{ display: 'block', fontSize: 14, fontWeight: 900 }}>{title}</span>
+      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: DIM, marginTop: 2 }}>{sub}</span>
+    </button>
+  );
+  return (
+    <div role="group" aria-label="極限の スタート地点" style={{ display: 'flex', gap: 8 }}>
+      {opt(fromSave, true, `${SAVE_NAME}地点から`, `第${Math.min(sealed, F - 1) + 1}段から`)}
+      {opt(!fromSave, false, 'はじめから', '第1段から')}
+    </div>
+  );
+}
+
+/* ---------------- 無限のランク ---------------- */
+
+/** ホームの「自己最高ランク」と、ランク表（届いたランクと次のランクだけ名前が見える） */
+function RankPanel({ bestStreak }: { bestStreak: number }) {
+  const [open, setOpen] = useState(false);
+  const rank = rankOf(bestStreak);
+  const nx = nextRankOf(bestStreak);
+  const c = rank?.world.color ?? CYAN;
+  return (
+    <div style={{ marginTop: 18, borderRadius: 8, border: `1px solid ${c}55`, background: 'rgba(1,3,7,0.6)', padding: 14 }}>
+      <p style={{ margin: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.3em', color: c, fontWeight: 800 }}>RANK</span>
+        <span style={{ fontSize: 12, fontWeight: 900, color: INK }}>無限の 自己最高ランク</span>
+      </p>
+      {rank ? (
+        <p style={{ margin: '8px 0 0', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 22, fontWeight: 900, textShadow: textGlow(`${c}88`) }}>{rank.name}</span>
+          <span style={{ fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.2em', color: c, fontWeight: 800 }}>{rank.world.code} LV.{rank.level}/{RANKS.length}</span>
+          <span style={{ fontSize: 11, color: DIM, fontWeight: 700 }}>最高 {bestStreak}連続</span>
+        </p>
+      ) : (
+        <p style={{ margin: '8px 0 0', fontSize: 13, color: DIM, fontWeight: 700 }}>無限で 連続正解すると ランクが 上がる。100連続で 算数MASTER。</p>
+      )}
+      {nx && rank && <p style={{ margin: '4px 0 0', fontSize: 11, color: DIM, fontWeight: 700 }}>つぎは {nx.rank.min}連続で「{nx.rank.name}」</p>}
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        style={{ ...btnGhost, padding: '6px 0 0', fontSize: 12, color: CYAN }}>{open ? 'ランク表を とじる' : 'ランク表を 見る'}</button>
+      {open && (
+        <ol style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: 3 }}>
+          {RANKS.map((d) => {
+            const got = bestStreak >= d.min;
+            const peek = !got && d === nx?.rank;
+            return (
+              <li key={d.level} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, color: got ? INK : FAINT }}>
+                <span style={{ width: 44, fontFamily: MONO, color: got || peek ? d.world.color : FAINT, textAlign: 'right' }}>{d.min}</span>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: got ? d.world.color : 'transparent', border: `1px solid ${d.world.color}88` }} />
+                <span>{got || peek ? d.name : '？？？'}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+/** 無限の最中に出す、いまのランク */
+function RankChip({ bestStreak }: { bestStreak: number }) {
+  const r = rankOf(bestStreak);
+  if (!r) return null;
+  return (
+    <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 900, color: INK, border: `1px solid ${r.world.color}`, boxShadow: glow(`${r.world.color}44`, 6), whiteSpace: 'nowrap' }}>
+      {r.name}
+    </span>
+  );
+}
+
+/** 次のランクまでの光の棒。ミスすると いまの連続から数え直す */
+function NextRankBar({ streak, bestStreak }: { streak: number; bestStreak: number }) {
+  const nx = nextRankOf(bestStreak, streak);
+  if (!nx) return (
+    <p style={{ maxWidth: 1024, margin: '8px auto 0', fontSize: 11, fontWeight: 900, color: RANKS[RANKS.length - 1]!.world.color, fontFamily: DISPLAY, letterSpacing: '0.3em' }}>MASTER</p>
+  );
+  const cur = rankOf(bestStreak);
+  const base = streak >= (cur?.min ?? 0) ? (cur?.min ?? 0) : 0;
+  const ratio = Math.max(0, Math.min(1, (streak - base) / Math.max(1, nx.rank.min - base)));
+  return (
+    <div style={{ maxWidth: 1024, margin: '8px auto 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(232,251,255,0.08)', overflow: 'hidden' }}>
+        <div style={{ width: `${ratio * 100}%`, height: '100%', background: nx.rank.world.color, boxShadow: glow(`${nx.rank.world.color}88`, 4), transition: 'width 300ms ease-out' }} />
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 800, color: DIM, whiteSpace: 'nowrap' }}>あと{nx.need}連続で「{nx.rank.name}」</span>
+    </div>
+  );
+}
+
+/** ランクが上がった瞬間の演出。世界が変わったときは世界の名前も出す */
+function RankUp({ rank }: { rank: RankDef }) {
+  const c = rank.world.color;
+  const newWorld = RANKS[rank.level - 2]?.world.code !== rank.world.code;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center', pointerEvents: 'none', background: 'rgba(1,3,7,0.55)' }}>
+      <div style={{ animation: 'lakPop 220ms ease-out', textAlign: 'center', padding: '18px 34px', borderRadius: 8, background: 'rgba(1,3,7,0.92)', border: `1px solid ${c}`, boxShadow: glow(`${c}77`, 26) }}>
+        <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 12, letterSpacing: '0.45em', color: c, fontWeight: 800 }}>
+          {newWorld ? `NEW WORLD ── ${rank.world.code}` : 'RANK UP'}
+        </p>
+        <p style={{ margin: '8px 0 0', fontSize: 30, fontWeight: 900, color: INK, textShadow: textGlow(`${c}aa`) }}>{rank.name}</p>
+        <p style={{ margin: '4px 0 0', fontFamily: MONO, fontSize: 12, color: DIM, fontWeight: 800 }}>{rank.min}連続　LV.{rank.level}/{RANKS.length}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * ハブに置く入口のカード。**ハブのいちばん下に置く**（毎日の練習の入口より目立たせない）。
  * 今の段とセーブを、端末の記録から出す。
@@ -627,6 +804,7 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }: {
 export function TrialCard({ appId, floors, onClick }: { appId: string; floors: number; onClick: () => void }) {
   useDisplayFont();
   const sum = useMemo(() => summarize(loadTrials(appId), floors), [appId, floors]);
+  const rank = rankOf(sum.endlessBestStreak);
   return (
     <button type="button" onClick={onClick} style={{
       width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: FONT, color: INK,
@@ -641,6 +819,7 @@ export function TrialCard({ appId, floors, onClick }: { appId: string; floors: n
         <span style={{ display: 'block', fontSize: 12, color: DIM, fontWeight: 700, marginTop: 4 }}>
           {sum.runs === 0 ? '今の じぶんの 実力を、1段ずつ 確かめよう'
             : `今の段 ${sum.current === null ? '—' : floorName(sum.current, floors)}　${SAVE_NAME} ${sum.sealed ? floorName(sum.sealed, floors) : 'なし'}`}
+          {rank && <span style={{ color: rank.world.color }}>{`　ランク ${rank.name}`}</span>}
         </span>
       </span>
       <span style={{ fontSize: 22, color: CYAN }}>›</span>

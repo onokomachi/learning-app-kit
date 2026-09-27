@@ -17,6 +17,8 @@ export interface ClimbStep {
 }
 export interface ClimbState {
     floors: number;
+    /** どの段から始めたか（突破済みとみなした段の数）。はじめからなら 0 */
+    start: number;
     /** 挑戦中の層（0始まり） */
     at: number;
     correct: number;
@@ -29,18 +31,95 @@ export interface ClimbState {
     done: boolean;
     history: ClimbStep[];
 }
-export declare function startClimb(floors: number): ClimbState;
+/**
+ * 極限を始める。from＝セーブ地点から始めるときの、突破済みとみなす段の数。
+ * 頂点までセーブしていても、最後の段は必ず解く（from は floors-1 まで）。
+ */
+export declare function startClimb(floors: number, from?: number): ClimbState;
 export declare function answerClimb(s: ClimbState, skillId: string, correct: boolean): ClimbState;
 /** 次に出す問題の記号。同じ層で同じ記号が続かないようにする */
 export declare function pickClimbSkill(s: ClimbState, defs: readonly TrialFloorDef[], rand?: () => number): string;
 export interface EndlessState {
     score: number;
     misses: number;
+    /** いまの連続正解（COMBO）。まちがえると0に戻る */
+    streak: number;
+    /** この回の最高連続正解。ランクはこれで決まる（下がらない） */
+    bestStreak: number;
     done: boolean;
     history: ClimbStep[];
 }
 export declare function startEndless(): EndlessState;
 export declare function answerEndless(s: EndlessState, floor: number, skillId: string, correct: boolean): EndlessState;
+/** ランクの世界。色は画面のネオンの色 */
+export interface RankWorld {
+    code: string;
+    label: string;
+    color: string;
+}
+export declare const RANK_WORLDS: {
+    readonly SCHOOL: {
+        readonly code: "SCHOOL";
+        readonly label: "がっこう";
+        readonly color: "#22e7ff";
+    };
+    readonly FIGHTER: {
+        readonly code: "FIGHTER";
+        readonly label: "かくとう";
+        readonly color: "#3dff9a";
+    };
+    readonly SAMURAI: {
+        readonly code: "SAMURAI";
+        readonly label: "さむらい";
+        readonly color: "#ffe24a";
+    };
+    readonly MAGIC: {
+        readonly code: "MAGIC";
+        readonly label: "まほう";
+        readonly color: "#c77dff";
+    };
+    readonly SCHOLAR: {
+        readonly code: "SCHOLAR";
+        readonly label: "がくしゃ";
+        readonly color: "#4d8dff";
+    };
+    readonly MACHINE: {
+        readonly code: "MACHINE";
+        readonly label: "マシン";
+        readonly color: "#ff9d2e";
+    };
+    readonly KING: {
+        readonly code: "KING";
+        readonly label: "おう";
+        readonly color: "#ff4d6d";
+    };
+    readonly LEGEND: {
+        readonly code: "LEGEND";
+        readonly label: "でんせつ";
+        readonly color: "#fff4c2";
+    };
+};
+export interface RankDef {
+    /** このランクになる連続正解の数 */
+    min: number;
+    name: string;
+    world: RankWorld;
+    /** 1始まりの順番 */
+    level: number;
+}
+/**
+ * ランク（38段）。連続正解の数で決まる。最初の10段は1問ごと、上に行くほど間があく。
+ * 100連続で いちばん上の「算数MASTER」（副題 STEP TO 算数MASTER のゴール）。
+ * もとは先生が中学校で自主学習の記録に使っていた称号を、小学生向けに直したもの。
+ */
+export declare const RANKS: readonly RankDef[];
+/** 連続正解 n 回で なっているランク。1回も正解していなければ null */
+export declare function rankOf(streak: number): RankDef | null;
+/** 次のランクと、あと何問の連続正解が要るか（いまの連続から）。いちばん上なら null */
+export declare function nextRankOf(bestStreak: number, streak?: number): {
+    rank: RankDef;
+    need: number;
+} | null;
 /**
  * 無限の出題。進むほど上の層に寄せる（3問正解ごとに、出る層の下限が1つ上がる）。
  */
@@ -59,6 +138,10 @@ export interface TrialRecord {
     score: number;
     /** ソロで最後までやった回か。刻印に数えるのはこの回だけ */
     soloComplete: boolean;
+    /** 無限: この回の最高連続正解（ランクのもと） */
+    bestStreak?: number;
+    /** 極限: セーブ地点から始めた回の、突破済みとみなした段の数（はじめからなら 0） */
+    start?: number;
     /** サーバに送れたか（端末の記録だけに使う） */
     sent?: boolean;
 }
@@ -69,13 +152,21 @@ export interface TrialSummary {
     best: number;
     /** 刻印のある、いちばん高い層（0なら刻印なし） */
     sealed: number;
-    /** 次に刻印を目指す層と、そこへ届いた回数（ソロで最後まで） */
+    /**
+     * いちばん近いセーブ: セーブより上で、届いた回数がいちばん多い段（同じなら高い段）と、その回数。
+     * 例）第4段と頂点に1回ずつ届いた → 第1〜4段は2回・第5段〜頂点は1回 → 第4段 2/3
+     */
     nextSeal: {
         floor: number;
         count: number;
     } | null;
+    /** 段ごとの、届いた回数（ソロで最後まで）。[k-1] が「第k段以上に届いた回」 */
+    reachCounts: number[];
+    /** 頂点に届いたことがあるか（以前は無限の解放条件。いまは無限は最初から開いている） */
     endlessUnlocked: boolean;
     endlessBest: number;
+    /** 無限の最高連続正解（自己最高ランクのもと） */
+    endlessBestStreak: number;
     runs: number;
 }
 export declare function summarize(records: readonly TrialRecord[], floors: number): TrialSummary;

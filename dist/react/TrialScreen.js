@@ -3,7 +3,9 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * 実力の階段（STEP TO 算数MASTER）の画面。どの算数アプリでも同じ見た目・同じ決まり。
  *
  *   極限 … やさしい段から登る。各段2問、同じ段で2回まちがえたら止まる。範囲は本番テストと同じ
- *   無限 … 頂点に1度たどりついた子だけ。単元のすべての項目で、3回まちがえるまで挑み続ける
+ *          セーブした段があれば「セーブ地点から」「はじめから」を選べる（最初はセーブ地点から）
+ *   無限 … 最初から だれでも。単元のすべての項目で、3回まちがえるまで挑み続ける。
+ *          連続正解でランク（38段・100連続で算数MASTER）が上がる。ランクはその回の中で下がらない
  *
  * アプリが渡すのは「段（どの項目を出すか）」「本番テストとの対応」と、
  * 1問を作る関数・出す関数だけ。問題は**練習・本番テストと同じ画面**で出す。
@@ -17,7 +19,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * 数字は他の子と比べない。比べるのは過去の自分だけ。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
+import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
 import { forceSolo } from '../sync/playMode.js';
 /* ---------------- 色と字 ---------------- */
 const FONT = 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
@@ -71,6 +73,8 @@ export function TrialScreen(props) {
     const [soloNotice, setSoloNotice] = useState(false);
     const [last, setLast] = useState(null);
     const [prev, setPrev] = useState(null);
+    /** セーブ地点から始めるか（セーブがあるときだけ選べる。最初はセーブ地点から） */
+    const [fromSave, setFromSave] = useState(true);
     const locked = useRef(false);
     const keyRef = useRef(0);
     // 端末のデータが消えていても、学級コードがあればサーバから取り戻す
@@ -84,6 +88,7 @@ export function TrialScreen(props) {
         locked.current = false;
         setQ({ floor, skillId, data: generate(skillId, floor), key: keyRef.current });
     };
+    const startFrom = fromSave ? sum.sealed : 0;
     const begin = (mode) => {
         if (forceSolo()) {
             setSoloNotice(true);
@@ -92,11 +97,11 @@ export function TrialScreen(props) {
         setPrev(sum);
         setFlash(null);
         if (mode === '極限') {
-            const s = startClimb(F);
+            const s = startClimb(F, startFrom);
             setClimb(s);
             setEndless(null);
             setPhase('CLIMB');
-            ask(0, pickClimbSkill(s, floors));
+            ask(s.at, pickClimbSkill(s, floors));
         }
         else {
             const s = startEndless();
@@ -107,8 +112,8 @@ export function TrialScreen(props) {
             ask(n.floor, n.skillId);
         }
     };
-    const finish = async (mode, cleared, score) => {
-        const rec = await saveTrial(sync, { mode, floor: cleared, floors: F, score, soloComplete: true });
+    const finish = async (mode, cleared, score, extra = {}) => {
+        const rec = await saveTrial(sync, { mode, floor: cleared, floors: F, score, soloComplete: true, ...extra });
         setLast(rec);
         setRecords(loadTrials(appId));
         setPhase('RESULT');
@@ -131,7 +136,7 @@ export function TrialScreen(props) {
             setTimeout(() => {
                 setFlash(null);
                 if (next.done) {
-                    void finish('極限', next.cleared, 0);
+                    void finish('極限', next.cleared, 0, { start: next.start });
                     return;
                 }
                 ask(next.at, pickClimbSkill(next, floors));
@@ -141,25 +146,30 @@ export function TrialScreen(props) {
         if (phase === 'ENDLESS' && endless) {
             const next = answerEndless(endless, q.floor, q.skillId, correct);
             setEndless(next);
-            setFlash({ kind: correct ? 'ok' : 'ng', text: correct ? `+1　${next.score}` : 'ミス' });
+            // ランクが上がった瞬間だけ大きく出す（その回の最高連続が しきい値を こえたとき）
+            const up = next.bestStreak > endless.bestStreak ? rankOf(next.bestStreak) : null;
+            const rankUp = up && up.min === next.bestStreak ? up : null;
+            setFlash(rankUp ? { kind: 'rank', rank: rankUp }
+                : { kind: correct ? 'ok' : 'ng', text: correct ? `${next.streak} COMBO` : 'ミス ── 連続は 0 から' });
             setTimeout(() => {
                 setFlash(null);
                 if (next.done) {
-                    void finish('無限', F, next.score);
+                    void finish('無限', F, next.score, { bestStreak: next.bestStreak });
                     return;
                 }
                 const n = pickEndless(next, endlessFloors);
                 ask(n.floor, n.skillId);
-            }, 650);
+            }, rankUp ? 1400 : 650);
         }
     };
     // 途中でやめた回は記録しない（セーブにも今の段にも数えない）
     const quit = () => { setPhase('HOME'); setClimb(null); setEndless(null); setQ(null); setFlash(null); };
     const ctx = { floors, testReqs, testMax, F };
     if (phase === 'HOME') {
-        return (_jsxs(Shell, { onBack: onExit, backLabel: exitLabel, children: [_jsx(Title, {}), _jsx(Status, { sum: sum, ctx: ctx }), _jsx(Stairs, { sum: sum, ctx: ctx }), _jsx(Effort, { records: records, sum: sum, F: F }), _jsxs("div", { style: { display: 'grid', gap: 12, marginTop: 22 }, children: [_jsx(ModeButton, { code: "LIMIT", title: "\u6975\u9650", tone: CYAN, sub: "\u3084\u3055\u3057\u3044\u6BB5\u304B\u3089\u767B\u308A\u3001\u3069\u3053\u307E\u3067\u78BA\u5B9F\u306B\u3067\u304D\u308B\u304B\u3092\u6E2C\u308B\uFF0810\u5206\u307B\u3069\uFF09", onClick: () => begin('極限') }), _jsx(ModeButton, { code: "INFINITY", title: "\u7121\u9650", tone: CYAN, disabled: !sum.endlessUnlocked, sub: sum.endlessUnlocked
-                                ? `単元の すべての項目で、まちがえるまで挑み続ける（${ENDLESS_MISSES}回ミスで終了）　最高 ${sum.endlessBest}`
-                                : '極限で 頂点に たどりつくと 解放される', onClick: () => begin('無限') })] }), _jsx(Rules, {})] }));
+        return (_jsxs(Shell, { onBack: onExit, backLabel: exitLabel, children: [_jsx(Title, {}), _jsx(Status, { sum: sum, ctx: ctx }), _jsx(Stairs, { sum: sum, ctx: ctx }), _jsx(Effort, { records: records, sum: sum, F: F }), _jsx(RankPanel, { bestStreak: sum.endlessBestStreak }), _jsxs("div", { style: { display: 'grid', gap: 12, marginTop: 22 }, children: [sum.sealed > 0 && _jsx(StartChoice, { fromSave: fromSave, onChange: setFromSave, sealed: sum.sealed, F: F }), _jsx(ModeButton, { code: "LIMIT", title: "\u6975\u9650", tone: CYAN, sub: startFrom > 0
+                                ? `${SAVE_NAME}地点（第${Math.min(startFrom, F - 1) + 1}段）から登り、どこまで確実にできるかを測る`
+                                : 'やさしい段から登り、どこまで確実にできるかを測る（10分ほど）', onClick: () => begin('極限') }), _jsx(ModeButton, { code: "INFINITY", title: "\u7121\u9650", tone: CYAN, sub: `連続正解で ランクが上がる。単元の すべての項目で、${ENDLESS_MISSES}回まちがえるまで`
+                                + (sum.endlessBestStreak > 0 ? `　自己最高 ${rankOf(sum.endlessBestStreak).name}` : ''), onClick: () => begin('無限') })] }), _jsx(Rules, {})] }));
     }
     if (phase === 'RESULT' && last) {
         return (_jsx(Shell, { onBack: () => setPhase('HOME'), backLabel: `${TRIAL_NAME}へ`, children: _jsx(Result, { last: last, sum: sum, prev: prev, ctx: ctx, onPractice: onPractice, onRetry: () => begin(last.mode) }) }));
@@ -167,7 +177,7 @@ export function TrialScreen(props) {
     const inClimb = phase === 'CLIMB' && climb;
     const fi = q?.floor ?? 0;
     const fl = inClimb ? floors[fi] : endlessFloors[fi];
-    return (_jsxs("div", { style: { width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: BG, color: INK, fontFamily: FONT, position: 'relative' }, children: [_jsx("style", { children: KEYFRAMES }), _jsx(Grid, {}), _jsxs("div", { style: { position: 'relative', flexShrink: 0, borderBottom: `1px solid ${LINE}`, background: 'rgba(1,3,7,0.9)', padding: '10px 14px 12px' }, children: [_jsxs("div", { style: { maxWidth: 1024, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [_jsx("button", { type: "button", onClick: quit, style: btnGhost, children: "\u2039 \u3084\u3081\u308B" }), _jsx("span", { style: { padding: '3px 10px', borderRadius: 4, fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', color: CYAN, border: `1px solid ${CYAN}`, boxShadow: glow(CYAN_SOFT, 8) }, children: inClimb ? '極限' : '無限' }), _jsxs("span", { style: { fontWeight: 900, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: [_jsx("span", { style: { color: CYAN, textShadow: textGlow(CYAN_SOFT) }, children: stepName(fi, F) }), _jsx("span", { style: { color: DIM, fontSize: 13, marginLeft: 8 }, children: fl?.label })] }), _jsxs("span", { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }, children: [inClimb ? (_jsxs(_Fragment, { children: [_jsx(Pips, { label: "\u6B63\u89E3", n: climb.correct, max: QUESTIONS_PER_FLOOR, color: CYAN }), _jsx(Pips, { label: "\u30DF\u30B9", n: climb.misses, max: MISSES_TO_STOP, color: RED })] })) : endless ? (_jsxs(_Fragment, { children: [_jsx("span", { style: { fontFamily: MONO, fontWeight: 900, color: CYAN, fontSize: 18 }, children: endless.score }), _jsx(Pips, { label: "\u30DF\u30B9", n: endless.misses, max: ENDLESS_MISSES, color: RED })] })) : null, _jsx("button", { type: "button", onClick: () => settle(false), style: { ...btnGhost, border: `1px solid ${LINE}`, fontSize: 12 }, children: "\u308F\u304B\u3089\u306A\u3044" })] })] }), inClimb && _jsx(LightTrail, { climb: climb, F: F })] }), _jsx("div", { style: { position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }, children: _jsx("div", { style: { maxWidth: 1024, margin: '0 auto', padding: '20px 14px' }, children: q && render(q.data, { onResult: (perfect) => settle(perfect), onMiss: () => settle(false) }) }, q?.key) }), flash && (_jsx("div", { style: { position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center', pointerEvents: 'none' }, children: _jsx("div", { style: {
+    return (_jsxs("div", { style: { width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: BG, color: INK, fontFamily: FONT, position: 'relative' }, children: [_jsx("style", { children: KEYFRAMES }), _jsx(Grid, {}), _jsxs("div", { style: { position: 'relative', flexShrink: 0, borderBottom: `1px solid ${LINE}`, background: 'rgba(1,3,7,0.9)', padding: '10px 14px 12px' }, children: [_jsxs("div", { style: { maxWidth: 1024, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }, children: [_jsx("button", { type: "button", onClick: quit, style: btnGhost, children: "\u2039 \u3084\u3081\u308B" }), _jsx("span", { style: { padding: '3px 10px', borderRadius: 4, fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', color: CYAN, border: `1px solid ${CYAN}`, boxShadow: glow(CYAN_SOFT, 8) }, children: inClimb ? '極限' : '無限' }), _jsxs("span", { style: { fontWeight: 900, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: [_jsx("span", { style: { color: CYAN, textShadow: textGlow(CYAN_SOFT) }, children: stepName(fi, F) }), _jsx("span", { style: { color: DIM, fontSize: 13, marginLeft: 8 }, children: fl?.label })] }), _jsxs("span", { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }, children: [inClimb ? (_jsxs(_Fragment, { children: [_jsx(Pips, { label: "\u6B63\u89E3", n: climb.correct, max: QUESTIONS_PER_FLOOR, color: CYAN }), _jsx(Pips, { label: "\u30DF\u30B9", n: climb.misses, max: MISSES_TO_STOP, color: RED })] })) : endless ? (_jsxs(_Fragment, { children: [_jsx(RankChip, { bestStreak: endless.bestStreak }), _jsxs("span", { title: "\u3044\u307E\u306E\u9023\u7D9A\u6B63\u89E3", style: { fontFamily: MONO, fontWeight: 900, color: CYAN, fontSize: 18 }, children: [endless.streak, _jsx("span", { style: { fontFamily: DISPLAY, fontSize: 8, letterSpacing: '0.2em', marginLeft: 3 }, children: "COMBO" })] }), _jsx(Pips, { label: "\u30DF\u30B9", n: endless.misses, max: ENDLESS_MISSES, color: RED })] })) : null, _jsx("button", { type: "button", onClick: () => settle(false), style: { ...btnGhost, border: `1px solid ${LINE}`, fontSize: 12 }, children: "\u308F\u304B\u3089\u306A\u3044" })] })] }), inClimb && _jsx(LightTrail, { climb: climb, F: F }), endless && _jsx(NextRankBar, { streak: endless.streak, bestStreak: endless.bestStreak })] }), _jsx("div", { style: { position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto' }, children: _jsx("div", { style: { maxWidth: 1024, margin: '0 auto', padding: '20px 14px' }, children: q && render(q.data, { onResult: (perfect) => settle(perfect), onMiss: () => settle(false) }) }, q?.key) }), flash?.kind === 'rank' && _jsx(RankUp, { rank: flash.rank }), flash && flash.kind !== 'rank' && (_jsx("div", { style: { position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center', pointerEvents: 'none' }, children: _jsx("div", { style: {
                         animation: 'lakPop 180ms ease-out', padding: '14px 30px', borderRadius: 8, fontWeight: 900, fontSize: 26,
                         background: 'rgba(1,3,7,0.9)',
                         ...(flash.kind === 'ng' ? { color: '#ffd0da', border: `1px solid ${RED}`, boxShadow: glow('rgba(255,85,119,0.35)') }
@@ -203,7 +213,7 @@ function Status({ sum, ctx }) {
     const today = sum.current ?? 0;
     const todayPred = predictScore(testReqs, today);
     const gain = nextGain(testReqs, sum.sealed, F);
-    return (_jsxs("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }, children: [_jsx(Stat, { code: "NOW", label: "\u4ECA\u306E\u6BB5", value: sum.current === null ? '—' : floorName(sum.current, F), sub: "\u3044\u3061\u3070\u3093\u65B0\u3057\u3044 \u6975\u9650", color: CYAN }), _jsx(Stat, { code: "SAVE", label: SAVE_NAME, value: sum.sealed ? floorName(sum.sealed, F) : 'なし', color: ORANGE, sub: sum.nextSeal ? `${floorName(sum.nextSeal.floor, F)}まで ${Math.min(sum.nextSeal.count, SEAL_COUNT)}/${SEAL_COUNT}` : '頂点を セーブ済み' }), _jsx(Stat, { code: "SCORE", label: "\u30C6\u30B9\u30C8\u4E88\u60F3", value: `${predicted}`, unit: `/${testMax}`, color: CYAN, sub: gain ? `${floorName(gain.floor, F)}を セーブで +${gain.gain}点` : 'これ以上は 上がらない' }), sum.current !== null && todayPred !== predicted && (_jsxs("p", { style: { gridColumn: '1 / -1', fontSize: 11, color: DIM, fontWeight: 700, textAlign: 'center', margin: 0 }, children: ["\u4ECA\u65E5\u306E\u7D50\u679C\uFF08", floorName(today, F), "\uFF09\u306A\u3089 ", todayPred, "\u70B9\u3002", SAVE_NAME, "\u3055\u308C\u308B\u3068 \u4E88\u60F3\u306B\u5165\u308B\u3088"] }))] }));
+    return (_jsxs("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }, children: [_jsx(Stat, { code: "NOW", label: "\u4ECA\u306E\u6BB5", value: sum.current === null ? '—' : floorName(sum.current, F), sub: "\u3044\u3061\u3070\u3093\u65B0\u3057\u3044 \u6975\u9650", color: CYAN }), _jsx(Stat, { code: "SAVE", label: SAVE_NAME, value: sum.sealed ? floorName(sum.sealed, F) : 'なし', color: ORANGE, sub: sum.nextSeal ? `${floorName(sum.nextSeal.floor, F)} ${SAVE_NAME}まで ${Math.min(sum.nextSeal.count, SEAL_COUNT)}/${SEAL_COUNT}` : `頂点を ${SAVE_NAME}済み` }), _jsx(Stat, { code: "SCORE", label: "\u30C6\u30B9\u30C8\u4E88\u60F3", value: `${predicted}`, unit: `/${testMax}`, color: CYAN, sub: gain ? `${floorName(gain.floor, F)}を セーブで +${gain.gain}点` : 'これ以上は 上がらない' }), sum.current !== null && todayPred !== predicted && (_jsxs("p", { style: { gridColumn: '1 / -1', fontSize: 11, color: DIM, fontWeight: 700, textAlign: 'center', margin: 0 }, children: ["\u4ECA\u65E5\u306E\u7D50\u679C\uFF08", floorName(today, F), "\uFF09\u306A\u3089 ", todayPred, "\u70B9\u3002", SAVE_NAME, "\u3055\u308C\u308B\u3068 \u4E88\u60F3\u306B\u5165\u308B\u3088"] }))] }));
 }
 function Stat({ code, label, value, unit, sub, color }) {
     return (_jsxs("div", { style: {
@@ -230,13 +240,16 @@ function Stairs({ sum, ctx }) {
             // 下の段ほど左、上の段ほど右から始めて「右上へのぼる」形にする
             const shift = (row / Math.max(1, n - 1)) * 34;
             const color = saved ? ORANGE : reached ? CYAN : FAINT;
+            // セーブまでの回数（●●○）。頂点の行は第F段と同じ回数なので出さない
+            const count = top || saved ? 0 : Math.min(sum.reachCounts[r.idx] ?? 0, SEAL_COUNT);
+            const nearest = !top && sum.nextSeal?.floor === r.idx + 1 && count > 0;
             return (_jsxs("div", { style: {
                     display: 'flex', alignItems: 'center', gap: 10, marginLeft: `${34 - shift}%`,
                     padding: '7px 10px', marginBottom: 4,
                     borderBottom: `2px solid ${color}`, borderLeft: `2px solid ${color}`,
                     boxShadow: saved || reached ? `0 6px 14px -8px ${color}` : undefined,
                     background: saved ? ORANGE_SOFT : reached ? CYAN_SOFT : 'transparent',
-                }, children: [_jsx("span", { style: { width: 56, flexShrink: 0, fontWeight: 900, fontSize: 13, color, textShadow: saved || reached ? textGlow(`${color}55`) : undefined }, children: r.name }), _jsx("span", { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700, color: reached ? DIM : FAINT }, children: r.label }), saved && _jsx("span", { style: { fontFamily: DISPLAY, fontSize: 9, fontWeight: 800, color: ORANGE, letterSpacing: '0.2em' }, children: "SAVE" }), here && _jsx("span", { style: { fontSize: 10, fontWeight: 900, color: CYAN, letterSpacing: '0.1em', animation: 'lakPulse 1.4s ease-in-out infinite' }, children: "\u25B6\u3044\u307E" })] }, r.name));
+                }, children: [_jsx("span", { style: { width: 56, flexShrink: 0, fontWeight: 900, fontSize: 13, color, textShadow: saved || reached ? textGlow(`${color}55`) : undefined }, children: r.name }), _jsx("span", { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700, color: reached ? DIM : FAINT }, children: r.label }), saved && _jsx("span", { style: { fontFamily: DISPLAY, fontSize: 9, fontWeight: 800, color: ORANGE, letterSpacing: '0.2em' }, children: "SAVE" }), count > 0 && (_jsxs("span", { title: `${SAVE_NAME}まで ${count}/${SEAL_COUNT}`, "aria-label": `${SAVE_NAME}まで ${count}/${SEAL_COUNT}`, style: { display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }, children: [Array.from({ length: SEAL_COUNT }, (_, i) => (_jsx("span", { style: { width: 7, height: 7, borderRadius: 9, border: `1px solid ${ORANGE}`, background: i < count ? ORANGE : 'transparent', boxShadow: i < count ? glow(`${ORANGE}66`, 4) : undefined } }, i))), nearest && _jsxs("span", { style: { fontSize: 10, fontWeight: 900, color: ORANGE, marginLeft: 3 }, children: ["\u3042\u3068", SEAL_COUNT - count, "\u56DE"] })] })), here && _jsx("span", { style: { fontSize: 10, fontWeight: 900, color: CYAN, letterSpacing: '0.1em', animation: 'lakPulse 1.4s ease-in-out infinite' }, children: "\u25B6\u3044\u307E" })] }, r.name));
         }) }));
 }
 /**
@@ -281,7 +294,7 @@ function ModeButton({ code, title, sub, tone, disabled, onClick }) {
 }
 function Rules() {
     const p = { margin: '4px 0 0' };
-    return (_jsxs("div", { style: { marginTop: 22, fontSize: 11, lineHeight: 1.7, color: FAINT, fontWeight: 700 }, children: [_jsxs("p", { style: p, children: ["\u30FB\u5404\u6BB5 ", QUESTIONS_PER_FLOOR, "\u554F\u3002\u30CE\u30FC\u30DF\u30B9\u3067\u89E3\u3051\u305F\u554F\u984C\u3060\u3051\u304C \u6B63\u89E3\u3002\u540C\u3058\u6BB5\u3067 ", MISSES_TO_STOP, "\u56DE \u307E\u3061\u304C\u3048\u305F\u3089 \u305D\u3053\u3067\u6B62\u307E\u308B\u3002"] }), _jsx("p", { style: p, children: "\u30FB2\u6BB5\u3064\u3065\u3051\u3066 \u30CE\u30FC\u30DF\u30B9\u306A\u3089\u3001\u6B21\u306E\u6BB5\u3092 \u98DB\u3073\u3053\u3048\u308B\uFF08\u6700\u5F8C\u306E\u6BB5\u306F \u5FC5\u305A\u89E3\u304F\uFF09\u3002" }), _jsxs("p", { style: p, children: ["\u30FB\u305D\u306E\u6BB5\u307E\u3067 \u5C4A\u3044\u305F\u56DE\u304C \u901A\u7B97", SEAL_COUNT, "\u56DE\u306B \u306A\u308B\u3068\u300C", SAVE_NAME, "\u300D\u3002\u3072\u3068\u308A\u3067 \u6700\u5F8C\u307E\u3067 \u3084\u3063\u305F\u56DE\u3060\u3051 \u6570\u3048\u308B\u3002"] }), _jsxs("p", { style: p, children: ["\u30FB\u300C\u4ECA\u306E\u6BB5\u300D\u306F \u3044\u3061\u3070\u3093\u65B0\u3057\u3044\u7D50\u679C\u3002\u4E0B\u304C\u308B\u3053\u3068\u3082 \u3042\u308B\u3002", SAVE_NAME, "\u306F \u6D88\u3048\u306A\u3044\u3002"] })] }));
+    return (_jsxs("div", { style: { marginTop: 22, fontSize: 11, lineHeight: 1.7, color: FAINT, fontWeight: 700 }, children: [_jsxs("p", { style: p, children: ["\u30FB\u5404\u6BB5 ", QUESTIONS_PER_FLOOR, "\u554F\u3002\u30CE\u30FC\u30DF\u30B9\u3067\u89E3\u3051\u305F\u554F\u984C\u3060\u3051\u304C \u6B63\u89E3\u3002\u540C\u3058\u6BB5\u3067 ", MISSES_TO_STOP, "\u56DE \u307E\u3061\u304C\u3048\u305F\u3089 \u305D\u3053\u3067\u6B62\u307E\u308B\u3002"] }), _jsx("p", { style: p, children: "\u30FB2\u6BB5\u3064\u3065\u3051\u3066 \u30CE\u30FC\u30DF\u30B9\u306A\u3089\u3001\u6B21\u306E\u6BB5\u3092 \u98DB\u3073\u3053\u3048\u308B\uFF08\u6700\u5F8C\u306E\u6BB5\u306F \u5FC5\u305A\u89E3\u304F\uFF09\u3002" }), _jsxs("p", { style: p, children: ["\u30FB\u305D\u306E\u6BB5\u307E\u3067 \u5C4A\u3044\u305F\u56DE\u304C \u901A\u7B97", SEAL_COUNT, "\u56DE\u306B \u306A\u308B\u3068\u300C", SAVE_NAME, "\u300D\u3002\u3072\u3068\u308A\u3067 \u6700\u5F8C\u307E\u3067 \u3084\u3063\u305F\u56DE\u3060\u3051 \u6570\u3048\u308B\u3002"] }), _jsxs("p", { style: p, children: ["\u30FB\u4E0A\u306E\u6BB5\u307E\u3067 \u5C4A\u3044\u305F\u56DE\u306F\u3001\u305D\u306E\u4E0B\u306E\u6BB5\u306E \u56DE\u6570\u306B\u3082 \u5165\u308B\uFF08\u25CF\u306F ", SAVE_NAME, "\u307E\u3067\u306E \u56DE\u6570\uFF09\u3002"] }), _jsxs("p", { style: p, children: ["\u30FB\u300C\u4ECA\u306E\u6BB5\u300D\u306F \u3044\u3061\u3070\u3093\u65B0\u3057\u3044\u7D50\u679C\u3002\u4E0B\u304C\u308B\u3053\u3068\u3082 \u3042\u308B\u3002", SAVE_NAME, "\u306F \u6D88\u3048\u306A\u3044\u3002", SAVE_NAME, "\u5730\u70B9\u304B\u3089 \u59CB\u3081\u308B\u3053\u3068\u3082 \u3067\u304D\u308B\u3002"] }), _jsx("p", { style: p, children: "\u30FB\u7121\u9650\u306F \u9023\u7D9A\u6B63\u89E3\u3067 \u30E9\u30F3\u30AF\u304C \u4E0A\u304C\u308B\uFF08100\u9023\u7D9A\u3067 \u7B97\u6570MASTER\uFF09\u3002\u307E\u3061\u304C\u3048\u308B\u3068 \u9023\u7D9A\u306F 0 \u306B \u3082\u3069\u308B\u304C\u3001\u30E9\u30F3\u30AF\u306F \u4E0B\u304C\u3089\u306A\u3044\u3002" })] }));
 }
 function Pips({ label, n, max, color }) {
     return (_jsx("span", { style: { display: 'flex', alignItems: 'center', gap: 4 }, title: label, "aria-label": `${label} ${n}/${max}`, children: Array.from({ length: max }, (_, i) => (_jsx("span", { style: { width: 10, height: 10, borderRadius: 2, background: i < n ? color : 'rgba(232,251,255,0.12)', boxShadow: i < n ? glow(`${color}66`, 5) : undefined } }, i))) }));
@@ -316,13 +329,64 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }) {
             border: `1px solid ${c}`, background: `${c}1f`, color: c, fontWeight: 900, boxShadow: glow(`${c}55`, 10),
         }, children: text }));
     if (last.mode === '無限') {
-        const best = prev ? last.score > prev.endlessBest : true;
-        return (_jsxs("div", { style: { textAlign: 'center', marginTop: 24 }, children: [_jsx("p", { style: { fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }, children: "INFINITY" }), _jsx("p", { style: { fontFamily: MONO, fontSize: 64, fontWeight: 900, margin: '12px 0 0', color: INK, textShadow: textGlow('rgba(34,231,255,0.55)') }, children: last.score }), _jsx("p", { style: { color: DIM, fontWeight: 700, margin: '8px 0 0' }, children: best ? '自己ベスト 更新！' : `自己ベスト ${sum.endlessBest}` }), _jsx("div", { style: { marginTop: 32 }, children: _jsx("button", { type: "button", onClick: onRetry, style: bigBtn(CYAN_SOFT, INK, `1px solid ${CYAN}`), children: "\u3082\u3046\u4E00\u5EA6 \u6311\u3080" }) })] }));
+        const streak = last.bestStreak ?? 0;
+        const rank = rankOf(streak);
+        const prevBest = prev?.endlessBestStreak ?? 0;
+        const newRank = rank && (rankOf(prevBest)?.level ?? 0) < rank.level;
+        const c = rank?.world.color ?? CYAN;
+        const nx = nextRankOf(Math.max(streak, sum.endlessBestStreak));
+        return (_jsxs("div", { style: { textAlign: 'center', marginTop: 24 }, children: [_jsx("p", { style: { fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }, children: "INFINITY \u2500\u2500 RANK" }), rank ? (_jsxs(_Fragment, { children: [_jsxs("p", { style: { fontFamily: DISPLAY, fontSize: 10, letterSpacing: '0.3em', color: c, fontWeight: 800, margin: '18px 0 0' }, children: [rank.world.code, "\u3000LV.", rank.level, "/", RANKS.length] }), _jsx("p", { style: { fontSize: 36, fontWeight: 900, margin: '6px 0 0', color: INK, textShadow: textGlow(`${c}aa`) }, children: rank.name })] })) : (_jsx("p", { style: { fontSize: 22, fontWeight: 900, margin: '18px 0 0', color: DIM }, children: "\u307E\u3060 \u30E9\u30F3\u30AF\u306A\u3057 \u2500\u2500 1\u554F \u6B63\u89E3\u3067 \u7B97\u6570\u30EB\u30FC\u30AD\u30FC" })), _jsxs("div", { style: { display: 'flex', justifyContent: 'center', gap: 28, marginTop: 18 }, children: [_jsxs("div", { children: [_jsx("p", { style: { margin: 0, fontSize: 11, color: DIM, fontWeight: 800 }, children: "\u6700\u9AD8\u9023\u7D9A" }), _jsx("p", { style: { margin: 0, fontFamily: MONO, fontSize: 30, fontWeight: 900 }, children: streak })] }), _jsxs("div", { children: [_jsx("p", { style: { margin: 0, fontSize: 11, color: DIM, fontWeight: 800 }, children: "\u6B63\u89E3" }), _jsx("p", { style: { margin: 0, fontFamily: MONO, fontSize: 30, fontWeight: 900 }, children: last.score })] })] }), newRank && chip(c, '自己最高ランク 更新！'), !newRank && sum.endlessBestStreak > 0 && (_jsxs("p", { style: { color: DIM, fontWeight: 700, margin: '12px 0 0' }, children: ["\u81EA\u5DF1\u6700\u9AD8\u30E9\u30F3\u30AF ", rankOf(sum.endlessBestStreak).name] })), nx && _jsxs("p", { style: { color: DIM, fontWeight: 700, fontSize: 13, margin: '10px 0 0' }, children: [nx.rank.min, "\u9023\u7D9A\u3067\u300C", nx.rank.name, "\u300D"] }), _jsx("div", { style: { marginTop: 32 }, children: _jsx("button", { type: "button", onClick: onRetry, style: bigBtn(CYAN_SOFT, INK, `1px solid ${CYAN}`), children: "\u3082\u3046\u4E00\u5EA6 \u6311\u3080" }) })] }));
     }
     // 次にやるべき段＝止まった段。そこで出る項目の練習へ飛ばす
     const stuck = last.floor < F ? floors[last.floor] : null;
     const gain = nextGain(testReqs, sum.sealed, F);
-    return (_jsxs("div", { style: { marginTop: 16 }, children: [_jsxs("div", { style: { textAlign: 'center' }, children: [_jsx("p", { style: { fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }, children: "RESULT" }), _jsx("p", { style: { fontSize: 38, fontWeight: 900, margin: '12px 0 0', textShadow: textGlow('rgba(34,231,255,0.5)') }, children: last.floor >= F ? '頂点 到達' : last.floor === 0 ? '第1段で ストップ' : `第${last.floor}段 到達` }), last.floor !== 0 && (_jsx("p", { style: { color: DIM, fontWeight: 700, margin: '8px 0 0' }, children: last.floor >= F ? '全段を 突破した。無限が ひらく。' : `第${last.floor + 1}段で ストップ ── ここが 次に きたえる場所` })), newBest && chip(CYAN, '自己最高 更新！'), newSave && chip(ORANGE, `${floorName(sum.sealed, F)} を ${SAVE_NAME}した`)] }), _jsx("div", { style: { marginTop: 24 }, children: _jsx(Status, { sum: sum, ctx: ctx }) }), stuck && (_jsxs("div", { style: { marginTop: 22, borderRadius: 8, border: `1px solid ${CYAN}`, background: CYAN_SOFT, padding: 16, boxShadow: glow('rgba(34,231,255,0.18)', 10) }, children: [_jsxs("p", { style: { fontSize: 12, fontWeight: 900, color: CYAN, margin: 0 }, children: [_jsx("span", { style: { fontFamily: DISPLAY, letterSpacing: '0.25em', marginRight: 8, fontSize: 10 }, children: "NEXT" }), "\u3044\u307E \u3084\u308B\u3079\u304D\u3053\u3068"] }), _jsxs("p", { style: { fontSize: 18, fontWeight: 900, margin: '4px 0 0' }, children: ["\u7B2C", last.floor + 1, "\u6BB5\uFF1A", stuck.label] }), gain && _jsxs("p", { style: { fontSize: 12, color: DIM, fontWeight: 700, margin: '4px 0 0' }, children: [floorName(gain.floor, F), "\u3092 ", SAVE_NAME, "\u3059\u308B\u3068\u3001\u30C6\u30B9\u30C8\u4E88\u60F3\u304C +", gain.gain, "\u70B9"] }), onPractice && stuck.skills[0] && (_jsx("div", { style: { marginTop: 12 }, children: _jsx("button", { type: "button", onClick: () => onPractice(stuck.skills[0]), style: bigBtn(CYAN, BG), children: "\u3053\u306E\u6BB5\u306E \u308C\u3093\u3057\u3085\u3046\u3078" }) }))] })), _jsx("div", { style: { marginTop: 14 }, children: _jsx("button", { type: "button", onClick: onRetry, style: bigBtn('transparent', INK, `1px solid ${LINE}`), children: "\u3082\u3046\u4E00\u5EA6 \u767B\u308B" }) })] }));
+    return (_jsxs("div", { style: { marginTop: 16 }, children: [_jsxs("div", { style: { textAlign: 'center' }, children: [_jsx("p", { style: { fontFamily: DISPLAY, fontSize: 11, letterSpacing: '0.45em', color: CYAN, fontWeight: 800, margin: 0 }, children: "RESULT" }), _jsx("p", { style: { fontSize: 38, fontWeight: 900, margin: '12px 0 0', textShadow: textGlow('rgba(34,231,255,0.5)') }, children: last.floor >= F ? '頂点 到達' : last.floor === 0 ? '第1段で ストップ' : `第${last.floor}段 到達` }), last.floor !== 0 && (_jsx("p", { style: { color: DIM, fontWeight: 700, margin: '8px 0 0' }, children: last.floor >= F ? '全段を 突破した。' : `第${last.floor + 1}段で ストップ ── ここが 次に きたえる場所` })), (last.start ?? 0) > 0 && (_jsxs("p", { style: { color: FAINT, fontWeight: 700, fontSize: 12, margin: '6px 0 0' }, children: [SAVE_NAME, "\u5730\u70B9\uFF08\u7B2C", (last.start ?? 0) + 1, "\u6BB5\uFF09\u304B\u3089 \u30B9\u30BF\u30FC\u30C8"] })), newBest && chip(CYAN, '自己最高 更新！'), newSave && chip(ORANGE, `${floorName(sum.sealed, F)} を ${SAVE_NAME}した`), !newSave && sum.nextSeal && sum.nextSeal.count > 0 && (_jsxs("p", { style: { color: ORANGE, fontWeight: 900, margin: '12px 0 0' }, children: [floorName(sum.nextSeal.floor, F), " ", SAVE_NAME, "\u307E\u3067 \u3042\u3068", SEAL_COUNT - Math.min(sum.nextSeal.count, SEAL_COUNT), "\u56DE"] }))] }), _jsx("div", { style: { marginTop: 24 }, children: _jsx(Status, { sum: sum, ctx: ctx }) }), stuck && (_jsxs("div", { style: { marginTop: 22, borderRadius: 8, border: `1px solid ${CYAN}`, background: CYAN_SOFT, padding: 16, boxShadow: glow('rgba(34,231,255,0.18)', 10) }, children: [_jsxs("p", { style: { fontSize: 12, fontWeight: 900, color: CYAN, margin: 0 }, children: [_jsx("span", { style: { fontFamily: DISPLAY, letterSpacing: '0.25em', marginRight: 8, fontSize: 10 }, children: "NEXT" }), "\u3044\u307E \u3084\u308B\u3079\u304D\u3053\u3068"] }), _jsxs("p", { style: { fontSize: 18, fontWeight: 900, margin: '4px 0 0' }, children: ["\u7B2C", last.floor + 1, "\u6BB5\uFF1A", stuck.label] }), gain && _jsxs("p", { style: { fontSize: 12, color: DIM, fontWeight: 700, margin: '4px 0 0' }, children: [floorName(gain.floor, F), "\u3092 ", SAVE_NAME, "\u3059\u308B\u3068\u3001\u30C6\u30B9\u30C8\u4E88\u60F3\u304C +", gain.gain, "\u70B9"] }), onPractice && stuck.skills[0] && (_jsx("div", { style: { marginTop: 12 }, children: _jsx("button", { type: "button", onClick: () => onPractice(stuck.skills[0]), style: bigBtn(CYAN, BG), children: "\u3053\u306E\u6BB5\u306E \u308C\u3093\u3057\u3085\u3046\u3078" }) }))] })), _jsx("div", { style: { marginTop: 14 }, children: _jsx("button", { type: "button", onClick: onRetry, style: bigBtn('transparent', INK, `1px solid ${LINE}`), children: "\u3082\u3046\u4E00\u5EA6 \u767B\u308B" }) })] }));
+}
+/* ---------------- セーブ地点から／はじめから ---------------- */
+function StartChoice({ fromSave, onChange, sealed, F }) {
+    const opt = (on, v, title, sub) => (_jsxs("button", { type: "button", "aria-pressed": on, onClick: () => onChange(v), style: {
+            flex: 1, padding: '9px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: FONT, textAlign: 'center',
+            border: `1px solid ${on ? (v ? ORANGE : CYAN) : LINE}`, color: on ? INK : DIM,
+            background: on ? (v ? ORANGE_SOFT : CYAN_SOFT) : 'rgba(1,3,7,0.6)',
+            boxShadow: on ? glow(`${v ? ORANGE : CYAN}33`, 8) : undefined,
+        }, children: [_jsx("span", { style: { display: 'block', fontSize: 14, fontWeight: 900 }, children: title }), _jsx("span", { style: { display: 'block', fontSize: 11, fontWeight: 700, color: DIM, marginTop: 2 }, children: sub })] }));
+    return (_jsxs("div", { role: "group", "aria-label": "\u6975\u9650\u306E \u30B9\u30BF\u30FC\u30C8\u5730\u70B9", style: { display: 'flex', gap: 8 }, children: [opt(fromSave, true, `${SAVE_NAME}地点から`, `第${Math.min(sealed, F - 1) + 1}段から`), opt(!fromSave, false, 'はじめから', '第1段から')] }));
+}
+/* ---------------- 無限のランク ---------------- */
+/** ホームの「自己最高ランク」と、ランク表（届いたランクと次のランクだけ名前が見える） */
+function RankPanel({ bestStreak }) {
+    const [open, setOpen] = useState(false);
+    const rank = rankOf(bestStreak);
+    const nx = nextRankOf(bestStreak);
+    const c = rank?.world.color ?? CYAN;
+    return (_jsxs("div", { style: { marginTop: 18, borderRadius: 8, border: `1px solid ${c}55`, background: 'rgba(1,3,7,0.6)', padding: 14 }, children: [_jsxs("p", { style: { margin: 0, display: 'flex', alignItems: 'baseline', gap: 8 }, children: [_jsx("span", { style: { fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.3em', color: c, fontWeight: 800 }, children: "RANK" }), _jsx("span", { style: { fontSize: 12, fontWeight: 900, color: INK }, children: "\u7121\u9650\u306E \u81EA\u5DF1\u6700\u9AD8\u30E9\u30F3\u30AF" })] }), rank ? (_jsxs("p", { style: { margin: '8px 0 0', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 900, textShadow: textGlow(`${c}88`) }, children: rank.name }), _jsxs("span", { style: { fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.2em', color: c, fontWeight: 800 }, children: [rank.world.code, " LV.", rank.level, "/", RANKS.length] }), _jsxs("span", { style: { fontSize: 11, color: DIM, fontWeight: 700 }, children: ["\u6700\u9AD8 ", bestStreak, "\u9023\u7D9A"] })] })) : (_jsx("p", { style: { margin: '8px 0 0', fontSize: 13, color: DIM, fontWeight: 700 }, children: "\u7121\u9650\u3067 \u9023\u7D9A\u6B63\u89E3\u3059\u308B\u3068 \u30E9\u30F3\u30AF\u304C \u4E0A\u304C\u308B\u3002100\u9023\u7D9A\u3067 \u7B97\u6570MASTER\u3002" })), nx && rank && _jsxs("p", { style: { margin: '4px 0 0', fontSize: 11, color: DIM, fontWeight: 700 }, children: ["\u3064\u304E\u306F ", nx.rank.min, "\u9023\u7D9A\u3067\u300C", nx.rank.name, "\u300D"] }), _jsx("button", { type: "button", onClick: () => setOpen((v) => !v), "aria-expanded": open, style: { ...btnGhost, padding: '6px 0 0', fontSize: 12, color: CYAN }, children: open ? 'ランク表を とじる' : 'ランク表を 見る' }), open && (_jsx("ol", { style: { listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: 3 }, children: RANKS.map((d) => {
+                    const got = bestStreak >= d.min;
+                    const peek = !got && d === nx?.rank;
+                    return (_jsxs("li", { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, color: got ? INK : FAINT }, children: [_jsx("span", { style: { width: 44, fontFamily: MONO, color: got || peek ? d.world.color : FAINT, textAlign: 'right' }, children: d.min }), _jsx("span", { style: { width: 8, height: 8, borderRadius: 2, background: got ? d.world.color : 'transparent', border: `1px solid ${d.world.color}88` } }), _jsx("span", { children: got || peek ? d.name : '？？？' })] }, d.level));
+                }) }))] }));
+}
+/** 無限の最中に出す、いまのランク */
+function RankChip({ bestStreak }) {
+    const r = rankOf(bestStreak);
+    if (!r)
+        return null;
+    return (_jsx("span", { style: { padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 900, color: INK, border: `1px solid ${r.world.color}`, boxShadow: glow(`${r.world.color}44`, 6), whiteSpace: 'nowrap' }, children: r.name }));
+}
+/** 次のランクまでの光の棒。ミスすると いまの連続から数え直す */
+function NextRankBar({ streak, bestStreak }) {
+    const nx = nextRankOf(bestStreak, streak);
+    if (!nx)
+        return (_jsx("p", { style: { maxWidth: 1024, margin: '8px auto 0', fontSize: 11, fontWeight: 900, color: RANKS[RANKS.length - 1].world.color, fontFamily: DISPLAY, letterSpacing: '0.3em' }, children: "MASTER" }));
+    const cur = rankOf(bestStreak);
+    const base = streak >= (cur?.min ?? 0) ? (cur?.min ?? 0) : 0;
+    const ratio = Math.max(0, Math.min(1, (streak - base) / Math.max(1, nx.rank.min - base)));
+    return (_jsxs("div", { style: { maxWidth: 1024, margin: '8px auto 0', display: 'flex', alignItems: 'center', gap: 10 }, children: [_jsx("div", { style: { flex: 1, height: 4, borderRadius: 2, background: 'rgba(232,251,255,0.08)', overflow: 'hidden' }, children: _jsx("div", { style: { width: `${ratio * 100}%`, height: '100%', background: nx.rank.world.color, boxShadow: glow(`${nx.rank.world.color}88`, 4), transition: 'width 300ms ease-out' } }) }), _jsxs("span", { style: { fontSize: 11, fontWeight: 800, color: DIM, whiteSpace: 'nowrap' }, children: ["\u3042\u3068", nx.need, "\u9023\u7D9A\u3067\u300C", nx.rank.name, "\u300D"] })] }));
+}
+/** ランクが上がった瞬間の演出。世界が変わったときは世界の名前も出す */
+function RankUp({ rank }) {
+    const c = rank.world.color;
+    const newWorld = RANKS[rank.level - 2]?.world.code !== rank.world.code;
+    return (_jsx("div", { style: { position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center', pointerEvents: 'none', background: 'rgba(1,3,7,0.55)' }, children: _jsxs("div", { style: { animation: 'lakPop 220ms ease-out', textAlign: 'center', padding: '18px 34px', borderRadius: 8, background: 'rgba(1,3,7,0.92)', border: `1px solid ${c}`, boxShadow: glow(`${c}77`, 26) }, children: [_jsx("p", { style: { margin: 0, fontFamily: DISPLAY, fontSize: 12, letterSpacing: '0.45em', color: c, fontWeight: 800 }, children: newWorld ? `NEW WORLD ── ${rank.world.code}` : 'RANK UP' }), _jsx("p", { style: { margin: '8px 0 0', fontSize: 30, fontWeight: 900, color: INK, textShadow: textGlow(`${c}aa`) }, children: rank.name }), _jsxs("p", { style: { margin: '4px 0 0', fontFamily: MONO, fontSize: 12, color: DIM, fontWeight: 800 }, children: [rank.min, "\u9023\u7D9A\u3000LV.", rank.level, "/", RANKS.length] })] }) }));
 }
 /**
  * ハブに置く入口のカード。**ハブのいちばん下に置く**（毎日の練習の入口より目立たせない）。
@@ -331,13 +395,14 @@ function Result({ last, sum, prev, ctx, onPractice, onRetry }) {
 export function TrialCard({ appId, floors, onClick }) {
     useDisplayFont();
     const sum = useMemo(() => summarize(loadTrials(appId), floors), [appId, floors]);
+    const rank = rankOf(sum.endlessBestStreak);
     return (_jsxs("button", { type: "button", onClick: onClick, style: {
             width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: FONT, color: INK,
             borderRadius: 10, padding: '16px 18px', border: `1px solid ${CYAN}`,
             background: `linear-gradient(120deg, #06121c 0%, ${BG} 60%)`,
             boxShadow: glow('rgba(34,231,255,0.22)', 12), display: 'flex', alignItems: 'center', gap: 16,
-        }, children: [_jsx(MiniStairs, { F: floors, reached: sum.best, saved: sum.sealed }), _jsxs("span", { style: { minWidth: 0, flex: 1 }, children: [_jsx("span", { style: { display: 'block', fontSize: 22, fontWeight: 900, letterSpacing: '0.06em', textShadow: textGlow('rgba(34,231,255,0.45)') }, children: TRIAL_NAME }), _jsx("span", { style: { display: 'block', fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.35em', color: CYAN, fontWeight: 800, marginTop: 2 }, children: TRIAL_SUBTITLE }), _jsx("span", { style: { display: 'block', fontSize: 12, color: DIM, fontWeight: 700, marginTop: 4 }, children: sum.runs === 0 ? '今の じぶんの 実力を、1段ずつ 確かめよう'
-                            : `今の段 ${sum.current === null ? '—' : floorName(sum.current, floors)}　${SAVE_NAME} ${sum.sealed ? floorName(sum.sealed, floors) : 'なし'}` })] }), _jsx("span", { style: { fontSize: 22, color: CYAN }, children: "\u203A" })] }));
+        }, children: [_jsx(MiniStairs, { F: floors, reached: sum.best, saved: sum.sealed }), _jsxs("span", { style: { minWidth: 0, flex: 1 }, children: [_jsx("span", { style: { display: 'block', fontSize: 22, fontWeight: 900, letterSpacing: '0.06em', textShadow: textGlow('rgba(34,231,255,0.45)') }, children: TRIAL_NAME }), _jsx("span", { style: { display: 'block', fontFamily: DISPLAY, fontSize: 9, letterSpacing: '0.35em', color: CYAN, fontWeight: 800, marginTop: 2 }, children: TRIAL_SUBTITLE }), _jsxs("span", { style: { display: 'block', fontSize: 12, color: DIM, fontWeight: 700, marginTop: 4 }, children: [sum.runs === 0 ? '今の じぶんの 実力を、1段ずつ 確かめよう'
+                                : `今の段 ${sum.current === null ? '—' : floorName(sum.current, floors)}　${SAVE_NAME} ${sum.sealed ? floorName(sum.sealed, floors) : 'なし'}`, rank && _jsx("span", { style: { color: rank.world.color }, children: `　ランク ${rank.name}` })] })] }), _jsx("span", { style: { fontSize: 22, color: CYAN }, children: "\u203A" })] }));
 }
 /** カードの左に置く小さな階段。届いた段は水色、セーブした段はオレンジ */
 export function MiniStairs({ F, reached, saved, size = 52 }) {
