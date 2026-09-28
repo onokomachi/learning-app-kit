@@ -16,7 +16,7 @@ export const gongitsune: AppCatalog = {
   "grade": 4,
   "url": "https://syo4-gonngitune.vercel.app",
   "generated_at": "2026-09-28",
-  "skill_count": 41,
+  "skill_count": 50,
   "modules": [
     {
       "module_id": "scene-1",
@@ -26,6 +26,12 @@ export const gongitsune: AppCatalog = {
           "skill_id": "q-26",
           "label": "設問26・ことばの意味（選択）",
           "desc": "兵十がどなった「ぬすっとぎつね」とは、どんな意味ですか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
+        {
+          "skill_id": "q-43",
+          "label": "設問43・ことばの意味（選択）",
+          "desc": "兵十は、とったうなぎやきすを「びく」の中へ入れました。「びく」とは何ですか。もっともふさわしいものをえらびましょう。",
           "answer_kind": "choice"
         },
         {
@@ -62,6 +68,12 @@ export const gongitsune: AppCatalog = {
           "skill_id": "q-27",
           "label": "設問27・うつりかわり・情景（選択）",
           "desc": "下線部「空はからっと晴れていて、もずの声がキンキンひびいていました。」という様子は、あなから出てきたごんのどんな気持ちと重なっていますか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
+        {
+          "skill_id": "q-48",
+          "label": "設問48・まとめ・考え（選択）",
+          "desc": "物語のはじめの「これは、わたしが小さいときに、村の茂平というおじいさんから聞いたお話です。」という文から分かることとして、もっともふさわしいものをえらびましょう。",
           "answer_kind": "choice"
         }
       ]
@@ -111,6 +123,12 @@ export const gongitsune: AppCatalog = {
           "label": "設問30・うつりかわり・情景（選択）",
           "desc": "下線部「人々が通ったあとには、ひがん花がふみ折られていました。」という情景から感じられることとして、もっともふさわしいものをえらびましょう。",
           "answer_kind": "choice"
+        },
+        {
+          "skill_id": "q-46",
+          "label": "設問46・うつりかわり・情景（選択）",
+          "desc": "場面二の中で、ごんの気持ちはどう変わりましたか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
         }
       ]
     },
@@ -159,6 +177,12 @@ export const gongitsune: AppCatalog = {
           "label": "設問13・まとめ・考え（記述）",
           "desc": "兵十がいわし屋になぐられたと知ったとき、ごんはどんな気持ちだったでしょうか。自分の言葉でまとめましょう。",
           "answer_kind": "free"
+        },
+        {
+          "skill_id": "q-49",
+          "label": "設問49・まとめ・考え（ぬき出し）",
+          "desc": "ごんが兵十を「おれと同じ」だと感じたのは、二人がどんな身の上だったからですか。本文から六字でぬき出しましょう。",
+          "answer_kind": "extract"
         }
       ]
     },
@@ -197,6 +221,12 @@ export const gongitsune: AppCatalog = {
           "answer_kind": "choice"
         },
         {
+          "skill_id": "q-51",
+          "label": "設問51・気持ちとわけ（選択）",
+          "desc": "兵十が加助に「だれだか知らんが、おれにくりや松たけなんかを、毎日毎日くれるんだよ」と話すのを聞いて、ごんはどんなことが分かったと考えられますか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
+        {
           "skill_id": "q-37",
           "label": "設問37・うつりかわり・情景（選択）",
           "desc": "「月のいいばんでした。」「チンチロリン、チンチロリンと、松虫が鳴いています。」とありますが、この場面の様子として、もっともふさわしいものをえらびましょう。",
@@ -212,6 +242,12 @@ export const gongitsune: AppCatalog = {
           "skill_id": "q-39",
           "label": "設問39・ことばの意味（選択）",
           "desc": "「おれは引き合わないなあ。」の「引き合わない」とは、どういう意味ですか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
+        {
+          "skill_id": "q-44",
+          "label": "設問44・ことばの意味（選択）",
+          "desc": "「兵十のかげぼうしをふみふみ行きました」の「かげぼうし」とは何ですか。もっともふさわしいものをえらびましょう。",
           "answer_kind": "choice"
         },
         {
@@ -250,6 +286,12 @@ export const gongitsune: AppCatalog = {
       "module_id": "scene-6",
       "title": "場面六 ごんと兵十",
       "skills": [
+        {
+          "skill_id": "q-45",
+          "label": "設問45・ことばの意味（選択）",
+          "desc": "「ごんは、ぐったりと目をつぶったまま、うなずきました」の「ぐったり」とは、どんな様子ですか。もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
         {
           "skill_id": "q-21",
           "label": "設問21・ようす・できごと（ぬき出し）",
@@ -293,10 +335,22 @@ export const gongitsune: AppCatalog = {
           "answer_kind": "extract"
         },
         {
+          "skill_id": "q-47",
+          "label": "設問47・うつりかわり・情景（選択）",
+          "desc": "場面五で「おれは引き合わないなあ」と思ったごんですが、場面六のはじめでは「その明くる日も、ごんは、くりを持って」出かけています。ここから分かるごんの気持ちとして、もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
+        },
+        {
           "skill_id": "q-25",
           "label": "設問25・まとめ・考え（記述）",
           "desc": "この物語の題名は、なぜ「ごんぎつね」なのでしょうか。ごんの気持ちと、兵十との関係の変化をふまえて、自分の言葉でまとめましょう。",
           "answer_kind": "free"
+        },
+        {
+          "skill_id": "q-50",
+          "label": "設問50・まとめ・考え（選択）",
+          "desc": "この物語全体を通して、作者がいちばん伝えたかったこととして、もっともふさわしいものをえらびましょう。",
+          "answer_kind": "choice"
         }
       ]
     }
@@ -311,6 +365,8 @@ export const gongitsune: AppCatalog = {
         "q-5",
         "q-4",
         "q-27",
+        "q-43",
+        "q-48",
         "q-7",
         "q-9",
         "q-34",
@@ -323,9 +379,13 @@ export const gongitsune: AppCatalog = {
         "q-39",
         "q-40",
         "q-16",
+        "q-44",
         "q-20",
         "q-23",
-        "q-24"
+        "q-24",
+        "q-45",
+        "q-47",
+        "q-50"
       ]
     },
     {
@@ -334,6 +394,7 @@ export const gongitsune: AppCatalog = {
       "skills": [
         "q-27",
         "q-9",
+        "q-46",
         "q-12",
         "q-11",
         "q-33",
@@ -350,9 +411,11 @@ export const gongitsune: AppCatalog = {
       "code": "読みまちがい③",
       "label": "人物をとりちがえる",
       "skills": [
+        "q-48",
         "q-8",
         "q-30",
         "q-15",
+        "q-51",
         "q-17",
         "q-41"
       ]
@@ -364,16 +427,23 @@ export const gongitsune: AppCatalog = {
         "q-26",
         "q-2",
         "q-5",
+        "q-43",
         "q-29",
         "q-7",
         "q-30",
+        "q-46",
         "q-34",
         "q-35",
+        "q-51",
         "q-39",
         "q-17",
+        "q-44",
         "q-22",
         "q-23",
-        "q-24"
+        "q-24",
+        "q-45",
+        "q-47",
+        "q-50"
       ]
     }
   ]
