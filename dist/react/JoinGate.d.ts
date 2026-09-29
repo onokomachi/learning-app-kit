@@ -15,8 +15,11 @@ export interface JoinFormProps {
  * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
  * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
-export declare function JoinGate({ config }: {
+export type JoinChipPosition = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+export declare function JoinGate({ config, chip }: {
     config: ResolveConfig;
+    /** まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする */
+    chip?: JoinChipPosition | false;
 }): import("react").JSX.Element;
 /**
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。

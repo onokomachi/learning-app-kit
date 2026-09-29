@@ -15,7 +15,7 @@ import { jsxs as _jsxs, jsx as _jsx, Fragment as _Fragment } from "react/jsx-run
  * クラス名に頼ると、どれかのアプリで文字が背景に沈む。
  */
 import { useEffect, useState } from 'react';
-import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, } from '../sync/index.js';
+import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
 const S = {
     scrim: {
@@ -84,14 +84,34 @@ function JoinForm({ config, onDone, onSkip, onClose }) {
     return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3058\u3076\u3093\u306E\u3053\u3068\u3092 \u304A\u3057\u3048\u3066\u306D" }), _jsx("p", { style: S.p, children: "\u306A\u307E\u3048\u306F \u304D\u304B\u306A\u3044\u3088\u3002\u300C\u3069\u306E\u5B66\u7D1A\u306E \u306A\u3093\u3070\u3093\u306E\u4EBA\u304B\u300D\u3060\u3051\u304C \u304D\u308D\u304F\u3055\u308C\u308B\u3088\u3002" }), _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-code", children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9" }), _jsx("input", { id: "lak-join-code", style: S.input, value: code, required: true, onChange: (e) => setCode(e.target.value), placeholder: "\u305B\u3093\u305B\u3044\u304B\u3089 \u304D\u3044\u3066\u306D" })] }), _jsxs("div", { style: { marginBottom: 16 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-num", children: "\u3057\u3085\u3063\u305B\u304D\u756A\u53F7" }), _jsx("input", { id: "lak-join-num", style: S.input, value: num, required: true, type: "number", inputMode: "numeric", min: 1, max: 100, onChange: (e) => setNum(e.target.value), placeholder: "12" })] }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy, children: busy ? 'おくっているよ…' : 'はじめる' }), onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onSkip, children: "\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u305A\u306B \u3064\u304B\u3046" })), onClose && !onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onClose, children: "\u3084\u3081\u308B" })), error && _jsx("p", { style: S.err, children: error }), _jsx("p", { style: S.note, children: "\u30B3\u30FC\u30C9\u304C \u306A\u304F\u3066\u3082 \u305C\u3093\u3076 \u3064\u304B\u3048\u308B\u3088\u3002\u3042\u3068\u304B\u3089 \u300C\u305B\u3063\u3066\u3044\u300D\u3067 \u5165\u308C\u308B\u3053\u3068\u3082 \u3067\u304D\u308B\u3088\u3002" })] }));
 }
 /**
- * まだ決めていない子にだけ、はじめの1回だけ出す。
- * 名乗った子にも、断った子にも、二度と出ない。
+ * まだ名乗っていない端末に、画面のすみに小さく出し続ける入口。
  *
- * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
- * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
+ * これが要る理由: 名乗りの画面ははじめの1回しか出ない。そこで「コードを入れずに つかう」を
+ * 押した端末や、たまたま閉じてしまった端末は、アプリに「せってい」が無いと二度と名乗れない。
+ * 実際、国語の4本には入口が無く、ごんぎつねの記録はすべて匿名のまま届いていた
+ * （先生の画面で番号ごとの分析ができない。画面上は正常に見えるので気づけない）。
+ * JoinGate に入れておけば、どのアプリも kit を上げるだけで入口がつく。
+ *
+ * 名乗った端末には出さない（授業中にじゃまにならないように）。
  */
-export function JoinGate({ config }) {
+function JoinChip({ config, position, onOpen }) {
+    const [student, setStudent] = useState(() => getStudent());
+    useEffect(() => subscribeStudent(setStudent), []);
+    if (!config.supabaseUrl || !config.supabaseKey || student)
+        return null;
+    const [v, h] = position.split('-');
+    return (_jsx("button", { type: "button", onClick: onOpen, "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092\u5165\u308C\u308B", style: {
+            position: 'fixed', [v]: 10, [h]: 10, zIndex: 9990,
+            border: '1px solid #bae6fd', borderRadius: 999, background: 'rgba(240,249,255,0.95)',
+            color: '#0369a1', fontWeight: 800, fontSize: 12, padding: '6px 12px', cursor: 'pointer',
+            boxShadow: '0 4px 12px -6px rgba(8,12,20,0.35)',
+            fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
+        }, children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u308B" }));
+}
+export function JoinGate({ config, chip = 'bottom-left' }) {
     const [open, setOpen] = useState(false);
+    // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
+    const [fromChip, setFromChip] = useState(false);
     useEffect(() => {
         // 接続先が無いアプリ（ポータルにつないでいない）では出さない
         if (!config.supabaseUrl || !config.supabaseKey)
@@ -102,9 +122,10 @@ export function JoinGate({ config }) {
         setOpen(true);
     }, [config.supabaseUrl, config.supabaseKey]);
     const configured = !!config.supabaseUrl && !!config.supabaseKey;
-    if (!open)
-        return _jsx(PlayModeGate, { enabled: configured });
-    return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onSkip: () => { chooseAnonymous(); setOpen(false); }, onClose: () => setOpen(false) }) }) }));
+    if (!open) {
+        return (_jsxs(_Fragment, { children: [_jsx(PlayModeGate, { enabled: configured }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
+    }
+    return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onSkip: fromChip ? undefined : () => { chooseAnonymous(); setOpen(false); }, onClose: () => { setOpen(false); setFromChip(false); } }) }) }));
 }
 /**
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。
