@@ -15,7 +15,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent,
+  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent,
   type ResolveConfig, type StudentIdentity,
 } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
@@ -150,8 +150,49 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
  * あわせて、名乗った子には授業の時間だけ「ひとりか、ふたりで1台か」を聞く
  * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
-export function JoinGate({ config }: { config: ResolveConfig }) {
+export type JoinChipPosition = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+
+/**
+ * まだ名乗っていない端末に、画面のすみに小さく出し続ける入口。
+ *
+ * これが要る理由: 名乗りの画面ははじめの1回しか出ない。そこで「コードを入れずに つかう」を
+ * 押した端末や、たまたま閉じてしまった端末は、アプリに「せってい」が無いと二度と名乗れない。
+ * 実際、国語の4本には入口が無く、ごんぎつねの記録はすべて匿名のまま届いていた
+ * （先生の画面で番号ごとの分析ができない。画面上は正常に見えるので気づけない）。
+ * JoinGate に入れておけば、どのアプリも kit を上げるだけで入口がつく。
+ *
+ * 名乗った端末には出さない（授業中にじゃまにならないように）。
+ */
+function JoinChip({ config, position, onOpen }: {
+  config: ResolveConfig; position: JoinChipPosition; onOpen: () => void;
+}) {
+  const [student, setStudent] = useState<StudentIdentity | null>(() => getStudent());
+  useEffect(() => subscribeStudent(setStudent), []);
+  if (!config.supabaseUrl || !config.supabaseKey || student) return null;
+  const [v, h] = position.split('-') as ['top' | 'bottom', 'left' | 'right'];
+  return (
+    <button type="button" onClick={onOpen}
+      aria-label="がっきゅうコードを入れる"
+      style={{
+        position: 'fixed', [v]: 10, [h]: 10, zIndex: 9990,
+        border: '1px solid #bae6fd', borderRadius: 999, background: 'rgba(240,249,255,0.95)',
+        color: '#0369a1', fontWeight: 800, fontSize: 12, padding: '6px 12px', cursor: 'pointer',
+        boxShadow: '0 4px 12px -6px rgba(8,12,20,0.35)',
+        fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
+      }}>
+      がっきゅうコードを 入れる
+    </button>
+  );
+}
+
+export function JoinGate({ config, chip = 'bottom-left' }: {
+  config: ResolveConfig;
+  /** まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする */
+  chip?: JoinChipPosition | false;
+}) {
   const [open, setOpen] = useState(false);
+  // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
+  const [fromChip, setFromChip] = useState(false);
 
   useEffect(() => {
     // 接続先が無いアプリ（ポータルにつないでいない）では出さない
@@ -162,13 +203,20 @@ export function JoinGate({ config }: { config: ResolveConfig }) {
   }, [config.supabaseUrl, config.supabaseKey]);
 
   const configured = !!config.supabaseUrl && !!config.supabaseKey;
-  if (!open) return <PlayModeGate enabled={configured} />;
+  if (!open) {
+    return (
+      <>
+        <PlayModeGate enabled={configured} />
+        {chip && <JoinChip config={config} position={chip} onOpen={() => { setFromChip(true); setOpen(true); }} />}
+      </>
+    );
+  }
   return (
     <div style={S.scrim} role="dialog" aria-label="がっきゅうコードの入力">
       <div style={S.card}>
         <JoinForm config={config}
-          onSkip={() => { chooseAnonymous(); setOpen(false); }}
-          onClose={() => setOpen(false)} />
+          onSkip={fromChip ? undefined : () => { chooseAnonymous(); setOpen(false); }}
+          onClose={() => { setOpen(false); setFromChip(false); }} />
       </div>
     </div>
   );
