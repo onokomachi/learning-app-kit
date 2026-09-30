@@ -4,7 +4,7 @@ export const gongitsune = {
     "subject": "国語",
     "grade": 4,
     "url": "https://syo4-gonngitune.vercel.app",
-    "generated_at": "2026-09-28",
+    "generated_at": "2026-09-30",
     "skill_count": 50,
     "modules": [
         {

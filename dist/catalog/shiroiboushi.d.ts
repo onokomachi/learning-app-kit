@@ -1,5 +1,5 @@
 /**
- * 自動生成されたカタログ: ごんぎつね（国語）
+ * 自動生成されたカタログ: 白いぼうし（国語）
  *
  * 算数の単元アプリと構造が違う（問題ジェネレータではなく data.ts の静的データ）。
  * モジュール＝場面、スキル＝設問として並べている。ラベルに読みの力
@@ -8,5 +8,5 @@
  * `npm run catalog` で作り直す。
  */
 import type { AppCatalog } from './types.js';
-export declare const gongitsune: AppCatalog;
-//# sourceMappingURL=gongitsune.d.ts.map
+export declare const shiroiboushi: AppCatalog;
+//# sourceMappingURL=shiroiboushi.d.ts.map

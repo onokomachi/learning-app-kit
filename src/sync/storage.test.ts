@@ -170,7 +170,7 @@ test('算数と国語が同じ仕組みで並ぶ（教科を問わない）', ()
 test('国語アプリも記号を引ける（設問ごと・場面ごと）', () => {
   const r = lookupSkill('hitotsunohana', 'q-1');
   assert.ok(r, 'q-1 が引ける');
-  assert.equal(r!.module_title, '場面1');
+  assert.equal(r!.module_title, '場面1 戦争中の日常');
   assert.match(r!.label, /設問1/);
 });
 
@@ -212,9 +212,9 @@ test('端末が空なら、起動時には送らない', async () => {
   assert.equal(called, false);
 });
 
-test('国語4単元が登録され、それぞれ違う切り口で並ぶ', () => {
+test('国語5単元が登録され、それぞれ違う切り口で並ぶ', () => {
   const kokugo = listApps().filter((a) => a.subject === '国語');
-  assert.equal(kokugo.length, 4);
+  assert.equal(kokugo.length, 5);
   // 物語文・説明文は設問ごと、つなぎ言葉はカテゴリ×難易度
   assert.ok(lookupSkill('upandloose', 'q-1'), '説明文は設問で引ける');
   const t = lookupSkill('tsunagi', 'gyakusetsu-normal');
