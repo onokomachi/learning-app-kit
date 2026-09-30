@@ -238,8 +238,29 @@ export interface TrialRecord {
   bestStreak?: number;
   /** 極限: セーブ地点から始めた回の、突破済みとみなした段の数（はじめからなら 0） */
   start?: number;
+  /**
+   * その回にまちがえた問題（段と記号）。先生が「どこでつまずいたか」を見るため。
+   * 極限では、止まった段（floor 番目＝突破した段の数と同じ添え字）のまちがいが、そのままつまずきの中身になる。
+   */
+  misses?: TrialMiss[];
   /** サーバに送れたか（端末の記録だけに使う） */
   sent?: boolean;
+}
+
+export interface TrialMiss { floor: number; skillId: string }
+
+/** 1回ぶんの履歴から、まちがえた問題だけを取り出す（同じ記号は1つにまとめ、多すぎる分は切る） */
+export function missesOf(history: readonly ClimbStep[], max = 12): TrialMiss[] {
+  const seen = new Set<string>();
+  const out: TrialMiss[] = [];
+  for (const h of history) {
+    if (h.correct) continue;
+    const key = `${h.floor}:${h.skillId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ floor: h.floor, skillId: h.skillId });
+  }
+  return out.slice(-max);
 }
 
 export interface TrialSummary {
@@ -383,6 +404,7 @@ export async function flushTrials(config: TrialSyncConfig): Promise<number> {
             kind: 'trial', mode: r.mode, floor: r.floor, floors: r.floors,
             score: r.score, soloComplete: r.soloComplete,
             bestStreak: r.bestStreak ?? 0, start: r.start ?? 0,
+            misses: r.misses ?? [],
           },
         })),
       }),

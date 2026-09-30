@@ -142,9 +142,20 @@ export interface TrialRecord {
     bestStreak?: number;
     /** 極限: セーブ地点から始めた回の、突破済みとみなした段の数（はじめからなら 0） */
     start?: number;
+    /**
+     * その回にまちがえた問題（段と記号）。先生が「どこでつまずいたか」を見るため。
+     * 極限では、止まった段（floor 番目＝突破した段の数と同じ添え字）のまちがいが、そのままつまずきの中身になる。
+     */
+    misses?: TrialMiss[];
     /** サーバに送れたか（端末の記録だけに使う） */
     sent?: boolean;
 }
+export interface TrialMiss {
+    floor: number;
+    skillId: string;
+}
+/** 1回ぶんの履歴から、まちがえた問題だけを取り出す（同じ記号は1つにまとめ、多すぎる分は切る） */
+export declare function missesOf(history: readonly ClimbStep[], max?: number): TrialMiss[];
 export interface TrialSummary {
     /** いちばん新しい極限の結果。まだ一度もなければ null */
     current: number | null;

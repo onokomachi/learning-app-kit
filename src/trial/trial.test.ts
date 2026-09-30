@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
   summarize, predictScore, nextGain, mergeTrials, RANKS, rankOf, nextRankOf,
-  type TrialRecord, type TrialFloorDef,
+  type TrialRecord, type TrialFloorDef, missesOf,
 } from './index.js';
 
 const run = (answers: boolean[], floors = 7) =>
@@ -173,4 +173,15 @@ test('ランク: 38段・連続正解で決まる・100連続で算数MASTER', (
   assert.deepEqual(nextRankOf(10, 10), { rank: RANKS[10], need: 2 });
   assert.equal(nextRankOf(12, 0)!.need, 14, 'ミスのあとは、いまの連続から数える');
   assert.equal(nextRankOf(100), null);
+});
+
+test('missesOf: まちがえた問題だけを、段と記号で1つずつ取り出す', () => {
+  const h = [
+    { floor: 0, skillId: 'a', correct: true },
+    { floor: 1, skillId: 'b', correct: false },
+    { floor: 1, skillId: 'b', correct: false },
+    { floor: 1, skillId: 'c', correct: false },
+  ];
+  assert.deepEqual(missesOf(h), [{ floor: 1, skillId: 'b' }, { floor: 1, skillId: 'c' }]);
+  assert.deepEqual(missesOf([{ floor: 0, skillId: 'a', correct: true }]), []);
 });

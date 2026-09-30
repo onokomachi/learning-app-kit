@@ -20,10 +20,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
-  summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials,
+  summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf,
   floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf,
   SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR,
-  type ClimbState, type EndlessState, type TrialRecord, type TrialFloorDef, type TestItemReq, type TrialSummary, type RankDef,
+  type ClimbState, type EndlessState, type TrialRecord, type TrialFloorDef, type TestItemReq, type TrialSummary, type RankDef, type TrialMiss,
 } from '../trial/index.js';
 import { forceSolo } from '../sync/playMode.js';
 
@@ -159,7 +159,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
     }
   };
 
-  const finish = async (mode: '極限' | '無限', cleared: number, score: number, extra: { bestStreak?: number; start?: number } = {}) => {
+  const finish = async (mode: '極限' | '無限', cleared: number, score: number, extra: { bestStreak?: number; start?: number; misses?: TrialMiss[] } = {}) => {
     const rec = await saveTrial(sync, { mode, floor: cleared, floors: F, score, soloComplete: true, ...extra });
     setLast(rec);
     setRecords(loadTrials(appId));
@@ -184,7 +184,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
       );
       setTimeout(() => {
         setFlash(null);
-        if (next.done) { void finish('極限', next.cleared, 0, { start: next.start }); return; }
+        if (next.done) { void finish('極限', next.cleared, 0, { start: next.start, misses: missesOf(next.history) }); return; }
         ask(next.at, pickClimbSkill(next, floors));
       }, clearedNow ? 1100 : 650);
       return;
@@ -199,7 +199,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
         : { kind: correct ? 'ok' : 'ng', text: correct ? `${next.streak} COMBO` : 'ミス ── 連続は 0 から' });
       setTimeout(() => {
         setFlash(null);
-        if (next.done) { void finish('無限', F, next.score, { bestStreak: next.bestStreak }); return; }
+        if (next.done) { void finish('無限', F, next.score, { bestStreak: next.bestStreak, misses: missesOf(next.history) }); return; }
         const n = pickEndless(next, endlessFloors);
         ask(n.floor, n.skillId);
       }, rankUp ? 1400 : 650);
