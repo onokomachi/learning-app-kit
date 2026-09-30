@@ -147,6 +147,21 @@ export function pickEndless(s, defs, rand = Math.random) {
     const pool = defs[floor]?.skills ?? [];
     return { floor, skillId: pool[Math.floor(rand() * pool.length)] ?? pool[0] ?? '' };
 }
+/** 1回ぶんの履歴から、まちがえた問題だけを取り出す（同じ記号は1つにまとめ、多すぎる分は切る） */
+export function missesOf(history, max = 12) {
+    const seen = new Set();
+    const out = [];
+    for (const h of history) {
+        if (h.correct)
+            continue;
+        const key = `${h.floor}:${h.skillId}`;
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        out.push({ floor: h.floor, skillId: h.skillId });
+    }
+    return out.slice(-max);
+}
 export function summarize(records, floors) {
     const climbs = records.filter((r) => r.mode === '極限').sort((a, b) => a.ts - b.ts);
     const countable = climbs.filter((r) => r.soloComplete);
@@ -259,6 +274,7 @@ export async function flushTrials(config) {
                         kind: 'trial', mode: r.mode, floor: r.floor, floors: r.floors,
                         score: r.score, soloComplete: r.soloComplete,
                         bestStreak: r.bestStreak ?? 0, start: r.start ?? 0,
+                        misses: r.misses ?? [],
                     },
                 })),
             }),

@@ -19,7 +19,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * 数字は他の子と比べない。比べるのは過去の自分だけ。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
+import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
 import { forceSolo } from '../sync/playMode.js';
 /* ---------------- 色と字 ---------------- */
 const FONT = 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
@@ -136,7 +136,7 @@ export function TrialScreen(props) {
             setTimeout(() => {
                 setFlash(null);
                 if (next.done) {
-                    void finish('極限', next.cleared, 0, { start: next.start });
+                    void finish('極限', next.cleared, 0, { start: next.start, misses: missesOf(next.history) });
                     return;
                 }
                 ask(next.at, pickClimbSkill(next, floors));
@@ -154,7 +154,7 @@ export function TrialScreen(props) {
             setTimeout(() => {
                 setFlash(null);
                 if (next.done) {
-                    void finish('無限', F, next.score, { bestStreak: next.bestStreak });
+                    void finish('無限', F, next.score, { bestStreak: next.bestStreak, misses: missesOf(next.history) });
                     return;
                 }
                 const n = pickEndless(next, endlessFloors);
