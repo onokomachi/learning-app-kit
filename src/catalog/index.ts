@@ -12,6 +12,7 @@ import { hitotsunohana } from './hitotsunohana.js';
 import { gongitsune } from './gongitsune.js';
 import { tsunagi } from './tsunagi.js';
 import { upandloose } from './upandloose.js';
+import { shiroiboushi } from './shiroiboushi.js';
 import { suihei } from './suihei.js';
 import { bai } from './bai.js';
 import { gaisu } from './gaisu.js';
@@ -46,7 +47,7 @@ function withExtras(c: AppCatalog): AppCatalog {
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, gongitsune, upandloose, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
+  [hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
     .map(withExtras)
     .map((c) => [c.app_id, c]),
 );
