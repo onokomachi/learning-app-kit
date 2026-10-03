@@ -7,7 +7,7 @@
 |---|---|
 | `learning-app-kit/review` | 間隔反復スケジューラ（Leitner 簡易版。純粋関数） |
 | `learning-app-kit/verify` | 問題ジェネレーターの汎用プロパティ検査・構成検査・カバレッジ監査 |
-| `templates/workflows/check.yml` | アプリ用 CI テンプレート |
+| `templates/workflows/check.yml` | アプリ用 CI（`fix` で全アプリに配る） |
 
 依存なし・React 非依存。TypeScript の型定義つき。
 
@@ -91,28 +91,32 @@ process.exit(r.finish('カバレッジ監査'));
 
 ## platform — 学級ポータルのルール点検
 
-アプリの `package.json` に `"learningApp": { "family": "math" }`（math / kokugo / portal / standalone）を書き、
-`"platform": "learning-app-kit-platform check"` を scripts に足して `check` から呼ぶ。
+新しいアプリは、作りはじめに1回だけ:
 
 ```bash
-npx learning-app-kit-platform check   # CLAUDE.md の共通ルール部分・共通ファイルが kit の版と同じか
-npx learning-app-kit-platform fix     # kit の版にそろえる（CLAUDE.md のアプリだけの段は残す）
+npx learning-app-kit-platform init math   # math / kokugo / portal / standalone
 ```
 
-共通ファイルの正しい版と共通ルールの文は `platform/` にある。1つのアプリだけで共通ファイルを直すと
-直しがほかに届かない（おまかせモードの不具合が4アプリで別々に直され、5アプリで残っていた）ので、CI で止める。
+これで次がそろう（あとは `fix` が保つ）:
 
-## CI テンプレート
+- `package.json` の `"learningApp": { "family": ... }`、`scripts.platform`・`scripts.prebuild`（Vercel の build の前に点検）・`scripts.check`
+- `CLAUDE.md`（上の段はアプリだけのこと、下の段は `platform/CLAUDE.common.md` の共通ルール）
+- 種類ごとの共通ファイル（`platform/families/<種類>/files/`）
+- CI `.github/workflows/check.yml`（`templates/workflows/check.yml`）
 
 ```bash
-cp node_modules/learning-app-kit/templates/workflows/check.yml .github/workflows/check.yml
+npx learning-app-kit-platform check    # ずれがあれば失敗（CI・Vercel の build 前・各セッションの npm run check で走る）
+npx learning-app-kit-platform fix      # kit の版にそろえる（CLAUDE.md のアプリだけの段は残す）
+npx learning-app-kit-platform watch    # kit の最新より古ければ失敗
+npx learning-app-kit-platform update   # kit を最新に上げて fix（CI が週1回動かし、check が通れば PR にする）
 ```
 
-`package.json` に次があれば、そのまま動く:
+共通ファイルを1つのアプリだけで直すと直しがほかに届かない（おまかせモードの不具合が4アプリで別々に直され、
+5アプリで残っていた）ので、CI と Vercel の build 前で止める。
 
-```json
-"check": "npm run lint && npm run build && npm run verify && npm run audit"
-```
+週1回の自動 PR には、各リポジトリの Settings → Actions → General →
+「Allow GitHub Actions to create and approve pull requests」がオンである必要がある（オフならブランチだけ作ってメールで知らせる）。
+Actions の PR ではその PR の CI は動かないが、PR を作る前に同じジョブで `npm run check` を通している。
 
 ## 開発
 
