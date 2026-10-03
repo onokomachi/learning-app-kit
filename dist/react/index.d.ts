@@ -8,4 +8,6 @@ export type { ScratchPadProps, ScratchOp } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';
 export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';
 export type { TrialScreenProps, TrialQuestionHandlers } from './TrialScreen.js';
+export { useAdaptiveLevels } from './useAdaptiveLevels.js';
+export type { Adaptive } from './useAdaptiveLevels.js';
 //# sourceMappingURL=index.d.ts.map
