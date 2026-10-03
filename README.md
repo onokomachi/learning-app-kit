@@ -114,9 +114,11 @@ npx learning-app-kit-platform update   # kit を最新に上げて fix（CI が�
 共通ファイルを1つのアプリだけで直すと直しがほかに届かない（おまかせモードの不具合が4アプリで別々に直され、
 5アプリで残っていた）ので、CI と Vercel の build 前で止める。
 
-週1回の自動 PR には、各リポジトリの Settings → Actions → General →
-「Allow GitHub Actions to create and approve pull requests」がオンである必要がある（オフならブランチだけ作ってメールで知らせる）。
-Actions の PR ではその PR の CI は動かないが、PR を作る前に同じジョブで `npm run check` を通している。
+週1回の自動更新（毎週月曜 7:00 JST）は、各アプリの CI が `update` で kit を最新に上げ、`npm run check` が通れば
+main に直接反映する（Vercel が本番に出す）。通らなければ反映せず、GitHub が持ち主にメールする。
+リポジトリの設定変更も、トークンの登録も要らない。CI の設定ファイル（`.github/workflows`）が変わる更新だけは
+GitHub の決まりで Actions から書きこめないので、反映せずにメールで知らせる（全体セッションで直す）。
+kit の変更は全アプリに月曜の朝いっせいに届くので、kit の PR には「ほかのアプリへの影響」を書く。
 
 ## 開発
 
