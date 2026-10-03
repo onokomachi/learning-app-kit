@@ -40,3 +40,9 @@ test('platform: CLAUDE.md・共通ファイルのずれを見つけ、fix でそ
   run(d, 'fix');
   assert.equal(readFileSync(join(d, 'CLAUDE.md'), 'utf8'), md);
 });
+
+test('platform: watch は使い方に入っていて、引数がちがえば止まる', () => {
+  const d = mkdtempSync(join(tmpdir(), 'plat-'));
+  writeFileSync(join(d, 'package.json'), JSON.stringify({ name: 'x', learningApp: { family: 'standalone' } }));
+  assert.equal(run(d, 'nope').status, 2);
+});

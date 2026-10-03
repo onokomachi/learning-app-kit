@@ -12,7 +12,7 @@
 **直したら**: `npm run check`（build と test）→ PR → マージ → 各アプリで kit をマージ後のSHAに上げる →
 `npx learning-app-kit-platform fix` → 各アプリの `npm run check`。`dist/` もコミットする（アプリは dist を使う）。
 共通ルールの文（`platform/CLAUDE.common.md`）を変えたら、このファイルの下の段も同じ文にそろえる。
-知識集（onokomachi-master-DB）の週1回の見回りが、kit の版がアプリごとにばらばらになっていないかも見ている。
+各アプリの CI が週1回 `learning-app-kit-platform watch` で kit の最新と見くらべ、遅れていればメールで知らせる。
 
 <!-- platform:begin（learning-app-kit が配る。手で書きかえない。直すときは kit の platform/CLAUDE.common.md） -->
 ## 学級ポータル共通のルール（learning-app-kit が配る。ここは手で書きかえない）
@@ -35,4 +35,5 @@
 - 子どもの氏名は扱わない（出席番号だけ）。APIキー・トークン・パスワードはファイルにも知識集にも書かない。
 - **終わる前に `npm run check` を通す**（このルールの点検 `npm run platform` も入っている）。
 - PR の本文に「ほかのアプリ・PRISM・データベースへの影響」を1行書く（無ければ「なし」）。
+- 毎週月曜の朝、各アプリの CI が kit の最新と見くらべる（watch）。失敗のメールが来たら、全体セッションで kit を上げて fix する。
 <!-- platform:end -->
