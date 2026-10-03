@@ -4,4 +4,5 @@ export { JoinGate, JoinSettingsRow } from './JoinGate.js';
 export { ScratchPad, ScratchPadToggle } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';
 export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';
+export { useAdaptiveLevels } from './useAdaptiveLevels.js';
 //# sourceMappingURL=index.js.map
