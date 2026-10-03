@@ -1,0 +1,41 @@
+{
+  "families": {
+    "math": {
+      "label": "算数の単元アプリ",
+      "files": [
+        "src/lib/useAdaptive.ts",
+        "src/lib/sound.ts",
+        "src/lib/praise.ts",
+        "src/lib/useApplySettings.ts",
+        "src/components/shared/Keypad.tsx",
+        "src/components/shared/AppShell.tsx",
+        "src/components/shared/AdaptiveBar.tsx",
+        "src/components/ui/GoalRing.tsx",
+        "src/main.tsx"
+      ]
+    },
+    "kokugo": {
+      "label": "国語の読解アプリ（ごんぎつね・一つの花・アップとルーズ・白いぼうし）",
+      "files": [
+        "src/App.tsx",
+        "src/TitleScreen.tsx",
+        "src/marks.tsx",
+        "src/lib/history.ts",
+        "src/lib/portal.ts",
+        "src/main.tsx",
+        "src/index.css",
+        "src/vite-env.d.ts",
+        "scripts/verify-data.ts",
+        "scripts/export-catalog.ts"
+      ]
+    },
+    "portal": {
+      "label": "先生用画面・子ども用ハブ",
+      "files": []
+    },
+    "standalone": {
+      "label": "共通ファイルを持たないアプリ",
+      "files": []
+    }
+  }
+}

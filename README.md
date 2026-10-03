@@ -89,6 +89,19 @@ process.exit(r.finish('カバレッジ監査'));
 - 式づくりのカードに正解トークンが足りない
 - 本番テストに一度も出ないレベル、レベル定義の重複、moduleId の不一致
 
+## platform — 学級ポータルのルール点検
+
+アプリの `package.json` に `"learningApp": { "family": "math" }`（math / kokugo / portal / standalone）を書き、
+`"platform": "learning-app-kit-platform check"` を scripts に足して `check` から呼ぶ。
+
+```bash
+npx learning-app-kit-platform check   # CLAUDE.md の共通ルール部分・共通ファイルが kit の版と同じか
+npx learning-app-kit-platform fix     # kit の版にそろえる（CLAUDE.md のアプリだけの段は残す）
+```
+
+共通ファイルの正しい版と共通ルールの文は `platform/` にある。1つのアプリだけで共通ファイルを直すと
+直しがほかに届かない（おまかせモードの不具合が4アプリで別々に直され、5アプリで残っていた）ので、CI で止める。
+
 ## CI テンプレート
 
 ```bash
