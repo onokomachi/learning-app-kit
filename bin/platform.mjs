@@ -4,6 +4,8 @@
  *
  *   npx learning-app-kit-platform check   … 点検だけ（ずれがあれば終了コード1）
  *   npx learning-app-kit-platform fix     … CLAUDE.md の共通ルール部分と共通ファイルを kit の版にそろえる
+ *   npx learning-app-kit-platform watch   … kit の最新（GitHub の main）と見くらべる。週1回の自動実行用。
+ *                                           遅れていれば終了コード1（GitHub がメールで知らせる）
  *
  * アプリの種類は package.json の "learningApp": { "family": "math" | "kokugo" | "portal" | "standalone" } で決める。
  * 見るもの:
@@ -20,8 +22,8 @@ const APP = process.cwd();
 const BEGIN = '<!-- platform:begin（learning-app-kit が配る。手で書きかえない。直すときは kit の platform/CLAUDE.common.md） -->';
 const END = '<!-- platform:end -->';
 const mode = process.argv[2] ?? 'check';
-if (!['check', 'fix'].includes(mode)) {
-  console.error('使い方: learning-app-kit-platform check | fix');
+if (!['check', 'fix', 'watch'].includes(mode)) {
+  console.error('使い方: learning-app-kit-platform check | fix | watch');
   process.exit(2);
 }
 
@@ -32,6 +34,31 @@ const block = `${BEGIN}\n${common}\n${END}`;
 
 const pkg = JSON.parse(read(join(APP, 'package.json')));
 const family = pkg.learningApp?.family;
+
+if (mode === 'watch') {
+  // kit は公開リポジトリなので、トークンなしで最新を読める（Actions では GITHUB_TOKEN があれば使う）
+  const dep = pkg.dependencies?.['learning-app-kit'] ?? pkg.devDependencies?.['learning-app-kit'] ?? '';
+  const pinned = dep.match(/archive\/([0-9a-f]{40})/)?.[1];
+  const headers = process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {};
+  const res = await fetch('https://api.github.com/repos/onokomachi/learning-app-kit/commits/main', { headers });
+  const latest = res.ok ? (await res.json()).sha : null;
+  if (!latest) { console.error('kit の最新が読めませんでした（ネットワークか GitHub API の回数制限）'); process.exit(2); }
+  if (!pinned) { console.error('✗ learning-app-kit がコミットの SHA で固定されていません'); process.exit(1); }
+  if (pinned === latest) { console.log(`✓ kit は最新です（${latest.slice(0, 7)}）`); process.exit(0); }
+  const rawMain = async (path) => { const r = await fetch(`https://raw.githubusercontent.com/onokomachi/learning-app-kit/${latest}/${path}`); return r.ok ? r.text() : null; };
+  const details = [];
+  if (((await rawMain('platform/CLAUDE.common.md')) ?? '').trimEnd() !== common) details.push('共通ルール（CLAUDE.md の下の段）が新しくなっている');
+  const m2 = JSON.parse((await rawMain('platform/manifest.json')) ?? '{"families":{}}');
+  for (const f of m2.families[family]?.files ?? []) {
+    const now = await rawMain(`platform/families/${family}/files/${f}`);
+    const here = existsSync(join(APP, f)) ? read(join(APP, f)) : null;
+    if (now !== here) details.push(`共通ファイル ${f} が新しくなっている`);
+  }
+  console.error(`✗ kit が最新より古い（このアプリ ${pinned.slice(0, 7)} → 最新 ${latest.slice(0, 7)}）。kit の直しがこのアプリに届いていません`);
+  for (const d of details) console.error(`  - ${d}`);
+  console.error('\n直し方: 全体セッションで kit を最新に上げて npx learning-app-kit-platform fix → npm run check');
+  process.exit(1);
+}
 const problems = [];
 const fixed = [];
 
