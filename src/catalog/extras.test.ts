@@ -17,6 +17,8 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   suusei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
   karakuri: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'fix-rule'],
   kawari: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
+  // エラーハンターの記号（eh-additive など）はレベル表にあるので、ここは共通のものだけ
+  hirei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   kakudaizu: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god',

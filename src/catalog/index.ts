@@ -22,6 +22,7 @@ import { karakuri } from './karakuri.js';
 import { kawari } from './kawari.js';
 import { suusei } from './suusei.js';
 import { syousu } from './syousu.js';
+import { hirei } from './hirei.js';
 import { COMMON_EXTRA_MODULES, APP_EXTRA_MODULES } from './extras.js';
 
 export type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
@@ -47,7 +48,7 @@ function withExtras(c: AppCatalog): AppCatalog {
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu]
+  [hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei]
     .map(withExtras)
     .map((c) => [c.app_id, c]),
 );
