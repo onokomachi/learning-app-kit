@@ -21,6 +21,7 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   hirei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   // データの活用も、エラーハンターの記号（eh-mean など）はレベル表にある
   data: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
+  oyoso: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   kakudaizu: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god',
