@@ -18,6 +18,7 @@ import { oyoso } from './oyoso.js';
 import { bunsuuSeisuu } from './bunsuu-seisuu.js';
 import { bunsuuTasizanHikizan } from './bunsuu-tasizan-hikizan.js';
 import { hitosono } from './hitosono.js';
+import { menseki } from './menseki.js';
 import { COMMON_EXTRA_MODULES, APP_EXTRA_MODULES } from './extras.js';
 /**
  * レベル表に無い記号（本番テスト・ボス戦・エラーハンターなど）を足す。
@@ -42,7 +43,7 @@ function withExtras(c) {
     return { ...c, extra_modules: [...merged.values()] };
 }
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono]
+export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono, menseki]
     .map(withExtras)
     .map((c) => [c.app_id, c]));
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */

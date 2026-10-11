@@ -44,6 +44,20 @@ const EH_JUDGE_FIX = {
  * app_id → 追加モジュール。
  */
 export const APP_EXTRA_MODULES = {
+    menseki: [{
+            module_id: 'error-hunter',
+            title: 'エラーハンター',
+            skills: [
+                k('eh-judge', '正しい式を「正しい」と見ぬく', 'まちがっていない面積の式を、まちがい扱いしない', 'choice'),
+                k('eh-slant', '斜めの辺を高さにしたまちがい', '平行四辺形で底辺 × 斜めの辺をかけてしまう', 'mixed'),
+                k('eh-half', '÷2をわすれたまちがい', '三角形の面積を底辺 × 高さのままにする', 'mixed'),
+                k('eh-trap', '台形の公式のまちがい', '÷2のわすれ・上底と下底をたさない・上底のわすれ', 'mixed'),
+                k('eh-diag', 'ひし形の公式のまちがい', '÷2のわすれ・対角線のかわりに辺を使う', 'mixed'),
+                k('eh-height', '三角形で斜めの辺を高さにしたまちがい', '底辺 × 斜めの辺 ÷ 2 としてしまう', 'mixed'),
+                k('eh-perim', 'まわりの長さを面積にしたまちがい', '面積を問われて辺の長さの合計を答える', 'mixed'),
+                k('eh-unit', '面積の単位のまちがい', '1m² を 100cm² と考える（10000cm² が正しい）', 'mixed'),
+            ],
+        }],
     bai: [EH_JUDGE_FIX],
     gaisu: [EH_JUDGE_FIX],
     suusei: [EH_JUDGE_FIX],
