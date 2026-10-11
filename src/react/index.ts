@@ -10,3 +10,5 @@ export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';
 export type { TrialScreenProps, TrialQuestionHandlers } from './TrialScreen.js';
 export { useAdaptiveLevels } from './useAdaptiveLevels.js';
 export type { Adaptive } from './useAdaptiveLevels.js';
+export { FractionPad, FractionPadToggle } from './FractionPad.js';
+export type { FractionPadProps, FractionTool } from './FractionPad.js';
