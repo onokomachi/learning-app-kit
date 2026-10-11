@@ -41,7 +41,7 @@ export const hitosono: AppCatalog = {
           "skill_id": "mean-val",
           "label": "④ 比の値を 求める",
           "desc": "比の値は 前の数 ÷ 後ろの数",
-          "answer_kind": "frac"
+          "answer_kind": "number"
         }
       ]
     },
@@ -69,7 +69,7 @@ export const hitosono: AppCatalog = {
         },
         {
           "skill_id": "eq-fill",
-          "label": "④ □に 入る数を 求める",
+          "label": "④ □（x）に 入る数を 求める",
           "desc": "何倍（何分の1）に なっているかを 見つけよう",
           "answer_kind": "number"
         }
