@@ -24,6 +24,8 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   oyoso: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   // エラーハンターの記号（eh-swap など）はカタログの項目にあるので、ここは共通のものだけ
   'bunsuu-seisuu': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
+  // エラーハンターの記号（eh-numden など）はカタログの項目にあるので、ここは共通のものだけ
+  'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   kakudaizu: [
