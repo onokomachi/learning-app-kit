@@ -18,7 +18,11 @@ export interface JoinFormProps {
 export type JoinChipPosition = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
 export declare function JoinGate({ config, chip }: {
     config: ResolveConfig;
-    /** まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする */
+    /**
+     * まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする。
+     * 既定は右下: 名乗ったあと同じ場所に SOLO/DUO の切り替え（PlayModeGate）が出るので、
+     * 子どもから見て「右下＝学級とのつながり」が1か所にまとまる。
+     */
     chip?: JoinChipPosition | false;
 }): import("react").JSX.Element;
 /**

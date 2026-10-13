@@ -101,14 +101,14 @@ function JoinChip({ config, position, onOpen }) {
         return null;
     const [v, h] = position.split('-');
     return (_jsx("button", { type: "button", onClick: onOpen, "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092\u5165\u308C\u308B", style: {
-            position: 'fixed', [v]: 10, [h]: 10, zIndex: 9990,
+            position: 'fixed', [v]: 12, [h]: 12, zIndex: 9990, // SOLO/DUO の札（右下 12px）と同じ位置
             border: '1px solid #bae6fd', borderRadius: 999, background: 'rgba(240,249,255,0.95)',
             color: '#0369a1', fontWeight: 800, fontSize: 12, padding: '6px 12px', cursor: 'pointer',
             boxShadow: '0 4px 12px -6px rgba(8,12,20,0.35)',
             fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
         }, children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u308B" }));
 }
-export function JoinGate({ config, chip = 'bottom-left' }) {
+export function JoinGate({ config, chip = 'bottom-right' }) {
     const [open, setOpen] = useState(false);
     // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
     const [fromChip, setFromChip] = useState(false);
