@@ -174,7 +174,7 @@ function JoinChip({ config, position, onOpen }: {
     <button type="button" onClick={onOpen}
       aria-label="がっきゅうコードを入れる"
       style={{
-        position: 'fixed', [v]: 10, [h]: 10, zIndex: 9990,
+        position: 'fixed', [v]: 12, [h]: 12, zIndex: 9990, // SOLO/DUO の札（右下 12px）と同じ位置
         border: '1px solid #bae6fd', borderRadius: 999, background: 'rgba(240,249,255,0.95)',
         color: '#0369a1', fontWeight: 800, fontSize: 12, padding: '6px 12px', cursor: 'pointer',
         boxShadow: '0 4px 12px -6px rgba(8,12,20,0.35)',
@@ -185,9 +185,13 @@ function JoinChip({ config, position, onOpen }: {
   );
 }
 
-export function JoinGate({ config, chip = 'bottom-left' }: {
+export function JoinGate({ config, chip = 'bottom-right' }: {
   config: ResolveConfig;
-  /** まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする */
+  /**
+   * まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする。
+   * 既定は右下: 名乗ったあと同じ場所に SOLO/DUO の切り替え（PlayModeGate）が出るので、
+   * 子どもから見て「右下＝学級とのつながり」が1か所にまとまる。
+   */
   chip?: JoinChipPosition | false;
 }) {
   const [open, setOpen] = useState(false);

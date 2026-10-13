@@ -27,6 +27,7 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   // エラーハンターの記号（eh-numden など）はカタログの項目にあるので、ここは共通のものだけ
   'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
+  heikin: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   menseki: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen',
     'eh-judge', 'eh-slant', 'eh-half', 'eh-trap', 'eh-diag', 'eh-height', 'eh-perim', 'eh-unit',
