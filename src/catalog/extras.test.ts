@@ -28,6 +28,8 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
   heikin: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
+  // 外国語活動。Can-Do チェックを mock-test で送る（はっぴょうは送らない）
+  eigo4: ['mock-test'],
   menseki: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen',
     'eh-judge', 'eh-slant', 'eh-half', 'eh-trap', 'eh-diag', 'eh-height', 'eh-perim', 'eh-unit',
