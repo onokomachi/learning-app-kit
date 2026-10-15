@@ -11,7 +11,7 @@ export const menseki4: AppCatalog = {
   "title": "面積のくらべ方と表し方",
   "subject": "算数",
   "grade": 4,
-  "url": "https://syo4-mennsekinokurabekatatoarawasikata.vercel.app",
+  "url": "https://syo4-mennsekinokurabekatatoarawasik.vercel.app",
   "generated_at": "2026-10-15",
   "skill_count": 33,
   "modules": [
