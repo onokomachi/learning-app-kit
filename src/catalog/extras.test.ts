@@ -45,7 +45,7 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
     'hissan-2-1', 'hissan-3-1', 'hissan-2-2', 'hissan-3-2', 'hissan-3-3',
   ],
   syousu: [
-    'mock-test', 'decompose-3', 'judge-correct', 'fix-number', 'fix-sign',
+    'mock-test', 'mock-test-muldiv', 'decompose-3', 'judge-correct', 'fix-number', 'fix-sign',
     'addsub-build-add-basic', 'addsub-build-add-diff', 'addsub-build-sub-basic',
     'addsub-build-sub-diff', 'addsub-build-sub-whole',
     'addsub-master-add-basic', 'addsub-master-add-diff', 'addsub-master-sub-basic',

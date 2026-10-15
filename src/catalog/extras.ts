@@ -146,6 +146,14 @@ export const APP_EXTRA_MODULES: Record<string, ModuleEntry[]> = {
 
   syousu: [
     {
+      // 本番テストが2つある（5. 小数のしくみ＝mock-test、13. 小数のかけ算とわり算＝mock-test-muldiv）
+      module_id: 'mock-test',
+      title: '本番テストモード',
+      skills: [
+        k('mock-test-muldiv', '本番テスト「小数のかけ算とわり算」（1回ぶん）', '表・裏を通してやったテスト1回ぶんの点数', 'test'),
+      ],
+    },
+    {
       module_id: 'error-hunter',
       title: 'エラーハンター',
       skills: [
