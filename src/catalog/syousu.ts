@@ -7,12 +7,12 @@ import type { AppCatalog } from './types.js';
 
 export const syousu: AppCatalog = {
   "app_id": "syousu",
-  "title": "小数のしくみ",
+  "title": "小数のしくみ・小数のかけ算とわり算",
   "subject": "算数",
   "grade": 4,
   "url": "https://syo4-syousu-v2.vercel.app",
-  "generated_at": "2026-09-15",
-  "skill_count": 31,
+  "generated_at": "2026-10-15",
+  "skill_count": 46,
   "modules": [
     {
       "module_id": "decimal-addsub",
@@ -69,7 +69,7 @@ export const syousu: AppCatalog = {
         {
           "skill_id": "div-remainder",
           "label": "わり算 ③",
-          "desc": "商は一の位まで・あまり 13.5 ÷ 4",
+          "desc": "商は 一の位まで・あまりを 入れる（13.5 ÷ 4）",
           "answer_kind": "?"
         },
         {
@@ -83,6 +83,96 @@ export const syousu: AppCatalog = {
           "label": "かけ算 ②",
           "desc": "小数第二位 × 1けた（1.36 × 7）",
           "answer_kind": "?"
+        },
+        {
+          "skill_id": "mul-2digit",
+          "label": "かけ算 ③",
+          "desc": "小数 × 2けた（4.9 × 72）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "mul-zero-end",
+          "label": "かけ算 ④",
+          "desc": "積の 終わりの0を 消す（17.6 × 40・3.85 × 2）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-2digit",
+          "label": "わり算 ④",
+          "desc": "小数 ÷ 2けた（18.2 ÷ 28）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-int",
+          "label": "わり算 ⑤",
+          "desc": "整数 ÷ 整数の わり進み（54 ÷ 24）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-round",
+          "label": "わり算 ⑥",
+          "desc": "商を 四捨五入して 上から2けた（16 ÷ 7）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-check",
+          "label": "わり算 ⑦",
+          "desc": "あまりと けん算（68.1 ÷ 5）",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "mul-mental",
+          "label": "かけ算 あんざん",
+          "desc": "0.8 × 3 を 0.1の いくつ分で",
+          "answer_kind": "number"
+        },
+        {
+          "skill_id": "div-mental",
+          "label": "わり算 あんざん",
+          "desc": "2.6 ÷ 2 を 0.1の いくつ分で",
+          "answer_kind": "number"
+        },
+        {
+          "skill_id": "mul-method",
+          "label": "かけ算の しくみ",
+          "desc": "2.7 × 5 → 27 × 5 の 1/10",
+          "answer_kind": "number"
+        },
+        {
+          "skill_id": "mul-point",
+          "label": "積の 小数点",
+          "desc": "4.3 × 16 の 積に 小数点を うつ",
+          "answer_kind": "choice"
+        },
+        {
+          "skill_id": "div-point",
+          "label": "商の 小数点",
+          "desc": "8.4 ÷ 3 の 商に 小数点を うつ",
+          "answer_kind": "choice"
+        },
+        {
+          "skill_id": "mul-word",
+          "label": "かけ算の 文章題",
+          "desc": "0.2L入りが 7本で 何L？",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-word",
+          "label": "わり算の 文章題",
+          "desc": "7.5mを 5人で 等分すると？",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-word-remainder",
+          "label": "あまりの 文章題",
+          "desc": "13.4dLを 3dLずつ → 何本・あまり",
+          "answer_kind": "steps"
+        },
+        {
+          "skill_id": "div-times",
+          "label": "小数倍",
+          "desc": "56cmは 20cmの 何倍？（2.8倍）",
+          "answer_kind": "steps"
         }
       ]
     },
