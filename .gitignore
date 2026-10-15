@@ -1,3 +1,8 @@
 node_modules/
 *.tsbuildinfo
 .DS_Store
+
+# 単元テストのスキャンなど市販教材は、公開リポジトリの kit に置かない（非公開の onokomachi-master-DB の materials/ に置く）
+jpeg/
+*.jpg
+*.jpeg
