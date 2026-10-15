@@ -21,6 +21,9 @@ import { hitosono } from './hitosono.js';
 import { menseki } from './menseki.js';
 import { heikin } from './heikin.js';
 import { eigo4 } from './eigo4.js';
+import { bunsuu4 } from './bunsuu4.js';
+import { menseki4 } from './menseki4.js';
+import { rippoutai } from './rippoutai.js';
 import { COMMON_EXTRA_MODULES, APP_EXTRA_MODULES } from './extras.js';
 /**
  * レベル表に無い記号（本番テスト・ボス戦・エラーハンターなど）を足す。
@@ -45,7 +48,7 @@ function withExtras(c) {
     return { ...c, extra_modules: [...merged.values()] };
 }
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono, menseki, heikin, eigo4]
+export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono, menseki, heikin, eigo4, bunsuu4, menseki4, rippoutai]
     .map(withExtras)
     .map((c) => [c.app_id, c]));
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
