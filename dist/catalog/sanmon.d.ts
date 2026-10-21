@@ -1,0 +1,9 @@
+/**
+ * SANMON:04（小4算数のゲーム）のカタログ。
+ * モジュール＝町（単元、module_id は SANMON の UNIT_KEYS）、スキル＝サブトピック（＝モンスター1体）。
+ * skill_id はサブトピック名そのもの（SANMON が記録に使う文字列）。
+ * 生成: SANMON の constants.ts の MATH_CATEGORIES から（手で書きかえない）。
+ */
+import type { AppCatalog } from './types.js';
+export declare const sanmon: AppCatalog;
+//# sourceMappingURL=sanmon.d.ts.map
