@@ -1,6 +1,7 @@
 /**
  * SANMON:04（小4算数のゲーム）のカタログ。
  * モジュール＝町（単元、module_id は SANMON の UNIT_KEYS）、スキル＝サブトピック（＝モンスター1体）。
+ * 2026-10 に 単元アプリにそろえて サブトピックを足した（各町の後ろのほう・垂直・平行と四角形）。
  * skill_id はサブトピック名そのもの（SANMON が記録に使う文字列）。
  * 生成: SANMON の constants.ts の MATH_CATEGORIES から（手で書きかえない）。
  */
@@ -12,8 +13,8 @@ export const sanmon: AppCatalog = {
   "subject": "ゲーム",
   "grade": 4,
   "url": "https://syo4-battlemath04pokemon.vercel.app",
-  "generated_at": "2026-10-21",
-  "skill_count": 151,
+  "generated_at": "2026-10-22",
+  "skill_count": 191,
   "modules": [
     {
       "module_id": "bignum",
@@ -293,6 +294,60 @@ export const sanmon: AppCatalog = {
           "skill_id": "三角じょうぎの角",
           "label": "三角じょうぎの角",
           "desc": "角の計算（モンスター）",
+          "answer_kind": "mixed"
+        }
+      ]
+    },
+    {
+      "module_id": "suihei",
+      "title": "垂直・平行と四角形",
+      "skills": [
+        {
+          "skill_id": "垂直・平行を見つけよう",
+          "label": "垂直・平行を見つけよう",
+          "desc": "垂直と平行（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "三角じょうぎで作図",
+          "label": "三角じょうぎで作図",
+          "desc": "垂直と平行（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "まちの中の垂直・平行",
+          "label": "まちの中の垂直・平行",
+          "desc": "垂直と平行（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "四角形の名前",
+          "label": "四角形の名前",
+          "desc": "四角形（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "四角形のせいしつ",
+          "label": "四角形のせいしつ",
+          "desc": "四角形（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "対角線のひみつ",
+          "label": "対角線のひみつ",
+          "desc": "四角形（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "しきつめ",
+          "label": "しきつめ",
+          "desc": "四角形（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "垂直・平行のまちがい探し",
+          "label": "垂直・平行のまちがい探し",
+          "desc": "まちがい探し（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -594,6 +649,42 @@ export const sanmon: AppCatalog = {
           "label": "計算のくふう",
           "desc": "きまりとくふう（モンスター）",
           "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "式に表そう",
+          "label": "式に表そう",
+          "desc": "式とドット（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "式をよもう",
+          "label": "式をよもう",
+          "desc": "式とドット（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "ドットたんてい",
+          "label": "ドットたんてい",
+          "desc": "式とドット（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "□を求めよう",
+          "label": "□を求めよう",
+          "desc": "きまりを見つけよう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "なりたつかな",
+          "label": "なりたつかな",
+          "desc": "きまりを見つけよう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "10倍・100倍のひみつ",
+          "label": "10倍・100倍のひみつ",
+          "desc": "きまりを見つけよう（モンスター）",
+          "answer_kind": "mixed"
         }
       ]
     },
@@ -629,6 +720,36 @@ export const sanmon: AppCatalog = {
           "skill_id": "L字型の面積",
           "label": "L字型の面積",
           "desc": "大きな面積とくふう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "方眼で面積",
+          "label": "方眼で面積",
+          "desc": "方眼と公式（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "面積の公式",
+          "label": "面積の公式",
+          "desc": "方眼と公式（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "大きな面積を求めよう",
+          "label": "大きな面積を求めよう",
+          "desc": "いろいろな面積（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "面積の変わり方",
+          "label": "面積の変わり方",
+          "desc": "いろいろな面積（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "面積のまちがい探し",
+          "label": "面積のまちがい探し",
+          "desc": "いろいろな面積（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -683,6 +804,42 @@ export const sanmon: AppCatalog = {
           "skill_id": "小数÷の文章題",
           "label": "小数÷の文章題",
           "desc": "文章題（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数×2けた",
+          "label": "小数×2けた",
+          "desc": "2けたの計算と小数点（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数÷2けた",
+          "label": "小数÷2けた",
+          "desc": "2けたの計算と小数点（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数点のいち",
+          "label": "小数点のいち",
+          "desc": "2けたの計算と小数点（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "商のがい数とたしかめ",
+          "label": "商のがい数とたしかめ",
+          "desc": "いろいろな小数の計算（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数のあんざん",
+          "label": "小数のあんざん",
+          "desc": "いろいろな小数の計算（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数倍",
+          "label": "小数倍",
+          "desc": "いろいろな小数の計算（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -876,6 +1033,42 @@ export const sanmon: AppCatalog = {
           "label": "整数になる分数",
           "desc": "文しょうだいと活用（モンスター）",
           "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "分数を図であらわそう",
+          "label": "分数を図であらわそう",
+          "desc": "図と等しい分数（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "わり算で帯分数に",
+          "label": "わり算で帯分数に",
+          "desc": "図と等しい分数（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "等しい分数を見つけよう",
+          "label": "等しい分数を見つけよう",
+          "desc": "図と等しい分数（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "分子が同じ分数の大小",
+          "label": "分子が同じ分数の大小",
+          "desc": "図と等しい分数（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "整数と帯分数の計算",
+          "label": "整数と帯分数の計算",
+          "desc": "整数と分数の計算（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "どこまで進んだ？",
+          "label": "どこまで進んだ？",
+          "desc": "整数と分数の計算（モンスター）",
+          "answer_kind": "mixed"
         }
       ]
     },
@@ -887,6 +1080,42 @@ export const sanmon: AppCatalog = {
           "skill_id": "変わり方と表",
           "label": "変わり方と表",
           "desc": "変わり方（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "ともなって変わる2つの量",
+          "label": "ともなって変わる2つの量",
+          "desc": "きまりを見つける（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "変わり方のきまり",
+          "label": "変わり方のきまり",
+          "desc": "きまりを見つける（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "変わり方を式に",
+          "label": "変わり方を式に",
+          "desc": "きまりを見つける（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "変わり方のグラフ",
+          "label": "変わり方のグラフ",
+          "desc": "グラフとつかい方（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "変わり方をつかってとく",
+          "label": "変わり方をつかってとく",
+          "desc": "グラフとつかい方（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "変わり方のまちがい探し",
+          "label": "変わり方のまちがい探し",
+          "desc": "グラフとつかい方（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -917,6 +1146,24 @@ export const sanmon: AppCatalog = {
           "skill_id": "位置の表し方",
           "label": "位置の表し方",
           "desc": "垂直・平行と位置（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "見取図",
+          "label": "見取図",
+          "desc": "見取図といかし方（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "直方体をいかそう",
+          "label": "直方体をいかそう",
+          "desc": "見取図といかし方（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "直方体のまちがい探し",
+          "label": "直方体のまちがい探し",
+          "desc": "見取図といかし方（モンスター）",
           "answer_kind": "mixed"
         }
       ]
