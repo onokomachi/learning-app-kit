@@ -1,9 +1,9 @@
 /**
  * SANMON:04（小4算数のゲーム）のカタログ。
  * モジュール＝町（単元、module_id は SANMON の UNIT_KEYS）、スキル＝サブトピック（＝モンスター1体）。
- * 2026-10 に 単元アプリにそろえて サブトピックを足した（各町の後ろのほう・垂直・平行と四角形）。
  * skill_id はサブトピック名そのもの（SANMON が記録に使う文字列）。
  * 生成: SANMON の constants.ts の MATH_CATEGORIES から（手で書きかえない）。
+ * 2026-10 に 単元アプリにそろえて サブトピックを足した（各町の後ろのほう・垂直・平行と四角形）。
  */
 import type { AppCatalog } from './types.js';
 
@@ -14,7 +14,7 @@ export const sanmon: AppCatalog = {
   "grade": 4,
   "url": "https://syo4-battlemath04pokemon.vercel.app",
   "generated_at": "2026-10-22",
-  "skill_count": 191,
+  "skill_count": 201,
   "modules": [
     {
       "module_id": "bignum",
@@ -451,6 +451,24 @@ export const sanmon: AppCatalog = {
           "label": "小数のひき算の文章題",
           "desc": "たし算・ひき算（モンスター）",
           "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数を分けて表そう",
+          "label": "小数を分けて表そう",
+          "desc": "小数をくわしく（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "単位をまぜて小数で",
+          "label": "単位をまぜて小数で",
+          "desc": "小数をくわしく（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "小数のまちがい探し",
+          "label": "小数のまちがい探し",
+          "desc": "小数をくわしく（モンスター）",
+          "answer_kind": "mixed"
         }
       ]
     },
@@ -510,6 +528,12 @@ export const sanmon: AppCatalog = {
           "skill_id": "大きな数のもんだい",
           "label": "大きな数のもんだい",
           "desc": "考える問題（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "わり算のまちがい探し",
+          "label": "わり算のまちがい探し",
+          "desc": "まちがい探し（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -630,6 +654,24 @@ export const sanmon: AppCatalog = {
           "skill_id": "予算で考えよう",
           "label": "予算で考えよう",
           "desc": "切り上げ・切り捨てで考えよう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "どの位を四捨五入する？",
+          "label": "どの位を四捨五入する？",
+          "desc": "四捨五入と切り捨て（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "切り捨てで何こ買えるか",
+          "label": "切り捨てで何こ買えるか",
+          "desc": "四捨五入と切り捨て（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "がい数のまちがい探し",
+          "label": "がい数のまちがい探し",
+          "desc": "四捨五入と切り捨て（モンスター）",
           "answer_kind": "mixed"
         }
       ]
@@ -1248,6 +1290,24 @@ export const sanmon: AppCatalog = {
           "skill_id": "まちがいをなおそう(倍の見方)",
           "label": "まちがいをなおそう(倍の見方)",
           "desc": "まちがいをなおそう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "テープ図でくらべられる量",
+          "label": "テープ図でくらべられる量",
+          "desc": "テープ図で考えよう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "テープ図で何倍か",
+          "label": "テープ図で何倍か",
+          "desc": "テープ図で考えよう（モンスター）",
+          "answer_kind": "mixed"
+        },
+        {
+          "skill_id": "テープ図でもとにする量",
+          "label": "テープ図でもとにする量",
+          "desc": "テープ図で考えよう（モンスター）",
           "answer_kind": "mixed"
         }
       ]
