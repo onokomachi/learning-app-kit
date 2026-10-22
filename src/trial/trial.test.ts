@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
-  summarize, predictScore, nextGain, mergeTrials, RANKS, rankOf, nextRankOf,
+  summarize, predictScore, nextGain, mergeTrials, RANKS, rankOf, nextRankOf, weakSkillsOf,
   type TrialRecord, type TrialFloorDef, missesOf,
 } from './index.js';
 
@@ -184,4 +184,34 @@ test('missesOf: まちがえた問題だけを、段と記号で1つずつ取り
   ];
   assert.deepEqual(missesOf(h), [{ floor: 1, skillId: 'b' }, { floor: 1, skillId: 'c' }]);
   assert.deepEqual(missesOf([{ floor: 0, skillId: 'a', correct: true }]), []);
+});
+
+test('無限: どんなに進んでも いちばん上の3段から出し、同じ記号を3回続けない', () => {
+  const defs: TrialFloorDef[] = Array.from({ length: 8 }, (_, i) => ({ label: `段${i + 1}`, skills: [`f${i}a`, `f${i}b`] }));
+  let s = startEndless();
+  const seenFloors = new Set<number>();
+  let prev2: string[] = [];
+  for (let i = 0; i < 200; i++) {
+    const n = pickEndless(s, defs);
+    assert.ok(n.floor >= Math.min(5, Math.floor(i / 3)), '下限は 3問ごとに上がり、いちばん上の3段（第6段）で止まる');
+    if (i > 30) seenFloors.add(n.floor);
+    assert.ok(!(prev2.length === 2 && prev2.every((k) => k === n.skillId)), '同じ記号が3回続かない');
+    prev2 = [...prev2, n.skillId].slice(-2);
+    s = answerEndless(s, n.floor, n.skillId, true);
+  }
+  assert.equal(seenFloors.size, 3, '進んだあとも 3つの段から出る（前は いちばん上の段だけになった）');
+});
+
+test('無限: その子の苦手（これまでの回のまちがい）を混ぜて出す', () => {
+  const defs: TrialFloorDef[] = Array.from({ length: 8 }, (_, i) => ({ label: `段${i + 1}`, skills: [`f${i}a`, `f${i}b`] }));
+  const weak = weakSkillsOf([rec(3, 1, { misses: [{ floor: 1, skillId: 'f1a' }] }), rec(3, 2, { misses: [{ floor: 1, skillId: 'f1a' }, { floor: 2, skillId: 'f2b' }] })]);
+  assert.deepEqual(weak, { f1a: 4, f2b: 2 }, '新しい5回ぶんは2倍に数える');
+  let s = startEndless();
+  let weakHits = 0;
+  for (let i = 0; i < 300; i++) {
+    const n = pickEndless(s, defs, Math.random, weak);
+    if (n.skillId === 'f1a' || n.skillId === 'f2b') { weakHits++; assert.ok(n.floor === 1 || n.floor === 2, '苦手の問題は その記号の段で出す'); }
+    s = answerEndless(s, n.floor, n.skillId, true);
+  }
+  assert.ok(weakHits > 50 && weakHits < 160, `苦手は およそ3問に1問（${weakHits}/300）`);
 });

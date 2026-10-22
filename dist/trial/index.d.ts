@@ -121,12 +121,24 @@ export declare function nextRankOf(bestStreak: number, streak?: number): {
     need: number;
 } | null;
 /**
- * 無限の出題。進むほど上の層に寄せる（3問正解ごとに、出る層の下限が1つ上がる）。
+ * 無限の出題。進むほど上の段に寄せる（3問正解ごとに、出る段の下限が1つ上がる）。
+ *
+ * ただし下限は「いちばん上の3段」より上には上げない。上げきると いちばん上の段（項目が1〜2個）だけになり、
+ * 同じ問題ばかりが続いた（子どもから「同じ問題しか出なくなる」と言われた）。
+ * 範囲の中では上の段ほど出やすくする（重み＝下限からの高さ＋1）。直前の2問と同じ記号は避ける。
+ *
+ * weak（その子の苦手: 記号 → 重み。weakSkillsOf で作る）があれば、4問目からは およそ3問に1問、
+ * 苦手の問題を出す（どの段の問題でもよい）。この回で まちがえた問題も苦手に足す。
  */
-export declare function pickEndless(s: EndlessState, defs: readonly TrialFloorDef[], rand?: () => number): {
+export declare function pickEndless(s: EndlessState, defs: readonly TrialFloorDef[], rand?: () => number, weak?: Readonly<Record<string, number>>): {
     floor: number;
     skillId: string;
 };
+/**
+ * その子の苦手（記号 → 重み）。これまでの回（極限・無限）で まちがえた問題を数える。
+ * 新しい5回ぶんの まちがいは2倍に数える（いま苦手なものを多めに）。見るのは新しい20回まで。
+ */
+export declare function weakSkillsOf(records: readonly TrialRecord[]): Record<string, number>;
 export interface TrialRecord {
     eventId: string;
     ts: number;

@@ -19,7 +19,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * 数字は他の子と比べない。比べるのは過去の自分だけ。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
+import { startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless, summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf, weakSkillsOf, floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf, SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR, } from '../trial/index.js';
 import { forceSolo } from '../sync/playMode.js';
 /* ---------------- 色と字 ---------------- */
 const FONT = 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
@@ -83,6 +83,8 @@ export function TrialScreen(props) {
         void flushTrials(sync);
     }, [sync]);
     const sum = useMemo(() => summarize(records, F), [records, F]);
+    /** これまでの回で まちがえた問題（無限で混ぜて出す） */
+    const weak = useMemo(() => weakSkillsOf(records), [records]);
     const ask = (floor, skillId) => {
         keyRef.current += 1;
         locked.current = false;
@@ -108,7 +110,7 @@ export function TrialScreen(props) {
             setEndless(s);
             setClimb(null);
             setPhase('ENDLESS');
-            const n = pickEndless(s, endlessFloors);
+            const n = pickEndless(s, endlessFloors, Math.random, weak);
             ask(n.floor, n.skillId);
         }
     };
@@ -157,7 +159,7 @@ export function TrialScreen(props) {
                     void finish('無限', F, next.score, { bestStreak: next.bestStreak, misses: missesOf(next.history) });
                     return;
                 }
-                const n = pickEndless(next, endlessFloors);
+                const n = pickEndless(next, endlessFloors, Math.random, weak);
                 ask(n.floor, n.skillId);
             }, rankUp ? 1400 : 650);
         }

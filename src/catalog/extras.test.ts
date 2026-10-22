@@ -12,10 +12,10 @@ import { lookupSkill, CATALOGS, listApps } from './index.js';
 
 /** アプリが送ってくる、レベル表に載っていない記号 */
 const RECORDED_EXTRAS: Record<string, string[]> = {
-  bai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix', 'trial-kyokugen', 'trial-mugen'],
-  gaisu: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
-  suusei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'eh-fix'],
-  karakuri: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'eh-judge', 'fix-rule'],
+  bai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'eh-judge', 'eh-fix', 'trial-kyokugen', 'trial-mugen'],
+  gaisu: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'eh-judge', 'eh-fix'],
+  suusei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'eh-judge', 'eh-fix'],
+  karakuri: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'eh-judge', 'fix-rule'],
   kawari: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   // エラーハンターの記号（eh-additive など）はレベル表にあるので、ここは共通のものだけ
   hirei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
@@ -23,18 +23,18 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   data: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   oyoso: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   // エラーハンターの記号（eh-swap など）はカタログの項目にあるので、ここは共通のものだけ
-  'bunsuu-seisuu': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
+  'bunsuu-seisuu': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   // エラーハンターの記号（eh-numden など）はカタログの項目にあるので、ここは共通のものだけ
-  'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
-  hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
-  heikin: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
-  bunsuu4: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
-  menseki4: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
-  rippoutai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen'],
+  'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  heikin: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  bunsuu4: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  menseki4: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  rippoutai: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   // 外国語活動。Can-Do チェックを mock-test で送る（はっぴょうは送らない）
   eigo4: ['mock-test'],
   menseki: [
-    'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'trial-kyokugen', 'trial-mugen',
+    'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen',
     'eh-judge', 'eh-slant', 'eh-half', 'eh-trap', 'eh-diag', 'eh-height', 'eh-perim', 'eh-unit',
   ],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],

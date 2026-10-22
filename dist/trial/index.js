@@ -13,6 +13,8 @@
  *   無限 … 最初から だれでも挑める。3回まちがえるまで続く。
  *          連続正解（COMBO）でランクが上がる（RANKS）。まちがえると連続は0に戻るが、
  *          その回に上がったランクは下がらない。単元ごとの自己最高ランクは消えない。
+ *          進むほど上の段から出るが、いちばん上の3段より狭くはしない（同じ問題ばかりにしない）。
+ *          その子が これまでの回・この回で まちがえた問題も混ぜる（pickEndless・weakSkillsOf）。
  *
  * 「一度の成功でその子の実力と決めない」ために、到達と刻印を分ける。
  *   今の層 … いちばん新しい極限の結果。下がることもある
@@ -138,14 +140,60 @@ export function nextRankOf(bestStreak, streak = bestStreak) {
     return next ? { rank: next, need: next.min - streak } : null;
 }
 /**
- * 無限の出題。進むほど上の層に寄せる（3問正解ごとに、出る層の下限が1つ上がる）。
+ * 無限の出題。進むほど上の段に寄せる（3問正解ごとに、出る段の下限が1つ上がる）。
+ *
+ * ただし下限は「いちばん上の3段」より上には上げない。上げきると いちばん上の段（項目が1〜2個）だけになり、
+ * 同じ問題ばかりが続いた（子どもから「同じ問題しか出なくなる」と言われた）。
+ * 範囲の中では上の段ほど出やすくする（重み＝下限からの高さ＋1）。直前の2問と同じ記号は避ける。
+ *
+ * weak（その子の苦手: 記号 → 重み。weakSkillsOf で作る）があれば、4問目からは およそ3問に1問、
+ * 苦手の問題を出す（どの段の問題でもよい）。この回で まちがえた問題も苦手に足す。
  */
-export function pickEndless(s, defs, rand = Math.random) {
+export function pickEndless(s, defs, rand = Math.random, weak = {}) {
     const top = defs.length - 1;
-    const low = Math.min(top, Math.floor(s.score / 3));
-    const floor = low + Math.floor(rand() * (top - low + 1));
+    const low = Math.min(Math.max(0, top - 2), Math.floor(s.score / 3));
+    const recent = new Set(s.history.slice(-2).map((h) => h.skillId));
+    const floorOf = new Map();
+    defs.forEach((d, i) => d.skills.forEach((k) => { if (!floorOf.has(k))
+        floorOf.set(k, i); }));
+    const weakNow = { ...weak };
+    for (const h of s.history)
+        if (!h.correct)
+            weakNow[h.skillId] = (weakNow[h.skillId] ?? 0) + 2;
+    const weakList = Object.entries(weakNow).filter(([k, w]) => w > 0 && floorOf.has(k) && !recent.has(k));
+    if (weakList.length > 0 && s.history.length >= 3 && rand() < 0.35) {
+        const skillId = pickWeighted(weakList, rand);
+        return { floor: floorOf.get(skillId), skillId };
+    }
+    const floors = Array.from({ length: top - low + 1 }, (_, i) => low + i);
+    const floor = Number(pickWeighted(floors.map((f) => [String(f), f - low + 1]), rand));
     const pool = defs[floor]?.skills ?? [];
-    return { floor, skillId: pool[Math.floor(rand() * pool.length)] ?? pool[0] ?? '' };
+    const fresh = pool.filter((k) => !recent.has(k));
+    const list = fresh.length > 0 ? fresh : pool;
+    return { floor, skillId: list[Math.floor(rand() * list.length)] ?? pool[0] ?? '' };
+}
+/** 重みに比例して1つ選ぶ */
+function pickWeighted(items, rand) {
+    const total = items.reduce((a, [, w]) => a + w, 0);
+    let r = rand() * total;
+    for (const [k, w] of items) {
+        r -= w;
+        if (r < 0)
+            return k;
+    }
+    return items[items.length - 1]?.[0] ?? '';
+}
+/**
+ * その子の苦手（記号 → 重み）。これまでの回（極限・無限）で まちがえた問題を数える。
+ * 新しい5回ぶんの まちがいは2倍に数える（いま苦手なものを多めに）。見るのは新しい20回まで。
+ */
+export function weakSkillsOf(records) {
+    const out = {};
+    [...records].sort((a, b) => b.ts - a.ts).slice(0, 20).forEach((r, i) => {
+        for (const m of r.misses ?? [])
+            out[m.skillId] = (out[m.skillId] ?? 0) + (i < 5 ? 2 : 1);
+    });
+    return out;
 }
 /** 1回ぶんの履歴から、まちがえた問題だけを取り出す（同じ記号は1つにまとめ、多すぎる分は切る） */
 export function missesOf(history, max = 12) {

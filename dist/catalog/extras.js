@@ -19,6 +19,7 @@ export const COMMON_EXTRA_MODULES = [
             k('boss-normal', 'ボス戦 Normal', 'ゆっくり戦えるれんしゅう戦', 'battle'),
             k('boss-hard', 'ボス戦 Hard', '本番テストと同じくらいのペース', 'battle'),
             k('boss-god', 'ボス戦 GOD', '本番テストより速い、真の実力者むけ', 'battle'),
+            k('boss-hell', 'ボス戦 HELL', 'GOD に勝った子だけ。苦手な問題が続き、時間もポイントもきびしい', 'battle'),
         ],
     },
     {
