@@ -5,7 +5,7 @@ export const sanmon = {
     "grade": 4,
     "url": "https://syo4-battlemath04pokemon.vercel.app",
     "generated_at": "2026-10-22",
-    "skill_count": 201,
+    "skill_count": 202,
     "modules": [
         {
             "module_id": "bignum",
@@ -525,6 +525,12 @@ export const sanmon = {
                     "skill_id": "わり算のまちがい探し",
                     "label": "わり算のまちがい探し",
                     "desc": "まちがい探し（モンスター）",
+                    "answer_kind": "mixed"
+                },
+                {
+                    "skill_id": "3けた÷3けた",
+                    "label": "3けた÷3けた",
+                    "desc": "大きな数の筆算（モンスター）",
                     "answer_kind": "mixed"
                 }
             ]
