@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   startClimb, answerClimb, pickClimbSkill, startEndless, answerEndless, pickEndless,
-  summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf,
+  summarize, predictScore, nextGain, saveTrial, syncTrialsFromServer, flushTrials, loadTrials, missesOf, weakSkillsOf,
   floorName, TRIAL_NAME, TRIAL_SUBTITLE, SAVE_NAME, RANKS, rankOf, nextRankOf,
   SEAL_COUNT, MISSES_TO_STOP, ENDLESS_MISSES, QUESTIONS_PER_FLOOR,
   type ClimbState, type EndlessState, type TrialRecord, type TrialFloorDef, type TestItemReq, type TrialSummary, type RankDef, type TrialMiss,
@@ -135,6 +135,8 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
   }, [sync]);
 
   const sum = useMemo(() => summarize(records, F), [records, F]);
+  /** これまでの回で まちがえた問題（無限で混ぜて出す） */
+  const weak = useMemo(() => weakSkillsOf(records), [records]);
 
   const ask = (floor: number, skillId: string) => {
     keyRef.current += 1;
@@ -154,7 +156,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
     } else {
       const s = startEndless();
       setEndless(s); setClimb(null); setPhase('ENDLESS');
-      const n = pickEndless(s, endlessFloors);
+      const n = pickEndless(s, endlessFloors, Math.random, weak);
       ask(n.floor, n.skillId);
     }
   };
@@ -200,7 +202,7 @@ export function TrialScreen<Q>(props: TrialScreenProps<Q>) {
       setTimeout(() => {
         setFlash(null);
         if (next.done) { void finish('無限', F, next.score, { bestStreak: next.bestStreak, misses: missesOf(next.history) }); return; }
-        const n = pickEndless(next, endlessFloors);
+        const n = pickEndless(next, endlessFloors, Math.random, weak);
         ask(n.floor, n.skillId);
       }, rankUp ? 1400 : 650);
     }
