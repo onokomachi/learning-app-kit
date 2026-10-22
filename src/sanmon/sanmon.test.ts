@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanmonUnits, openUnitKeys, SANMON_UNITS, type SanmonStatus } from './index.js';
+import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, type SanmonStatus } from './index.js';
 import { CATALOGS } from '../catalog/index.js';
 
 const empty: SanmonStatus = { stamina: 0, earnedToday: 0, apps: {} };
@@ -33,4 +33,12 @@ test('小数の2つの町は、テストとモジュールで分けて判定す�
   const units = sanmonUnits({ ...empty, apps: { syousu: { mastered: all, tests: { 'mock-test': 3 }, trial: 1, solo_days: 5 } } });
   assert.equal(units.find((u) => u.key === 'decimal')!.open, true);
   assert.equal(units.find((u) => u.key === 'decmuldiv')!.open, false, 'かけ算わり算のテストはまだ');
+});
+
+test('モードの開け閉め: 書いていないモードは開いている・false だけ閉じる', () => {
+  assert.equal(isModeOpen({}, 'speed'), true);
+  assert.equal(isModeOpen(null, 'class_duel'), true);
+  assert.equal(isModeOpen({ speed: false }, 'speed'), false);
+  assert.equal(isModeOpen({ speed: false }, 'adventure'), true);
+  assert.equal(new Set(SANMON_MODES.map((m) => m.key)).size, SANMON_MODES.length, 'キーが重ならない');
 });

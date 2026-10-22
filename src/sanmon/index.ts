@@ -185,3 +185,35 @@ export async function saveSanmonSave(config: ResolveConfig, studentId: string, d
   const r = await rpc<boolean>(config, 'sanmon_save_put', { p_student_id: studentId, p_data: data });
   return r.ok;
 }
+
+/* ------------------------------------------------------------------ */
+/* モードの開け閉め（先生が PRISM の SANMON タブで、学級ごとに決める）     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 先生が開け閉めできる SANMON のモード。サーバの表 sanmon_mode_settings の modes のキー。
+ * 「きろく」は いつも開いている（自分の記録を見るだけなので）。
+ */
+export const SANMON_MODES = [
+  { key: 'adventure', label: 'ぼうけん', desc: '3Dの町を歩いて、モンスターと算数バトル' },
+  { key: 'speed', label: 'スピードデュエル', desc: 'コンピュータと早押し' },
+  { key: 'monster', label: 'モンスター対戦（コンピュータ）', desc: 'つかまえたモンスターで、コンピュータと早押し' },
+  { key: 'class_duel', label: 'クラス対戦', desc: '同じ学級の友だちと、モンスターの問題で早押し' },
+  { key: 'practice', label: '練習', desc: '分野をえらんで問題をとく' },
+  { key: 'review', label: '復習', desc: 'まちがえた問題を ちょうどよいころに' },
+  { key: 'mock_test', label: '本番テスト', desc: '学校のテストの形で' },
+] as const;
+
+export type SanmonModeKey = (typeof SANMON_MODES)[number]['key'];
+/** 書いていないモードは開いている（false のときだけ閉じる） */
+export type SanmonModes = Partial<Record<SanmonModeKey, boolean>>;
+
+export function isModeOpen(modes: SanmonModes | null | undefined, key: SanmonModeKey): boolean {
+  return modes?.[key] !== false;
+}
+
+/** 自分の学級のモードの開け閉めを読む（読めないときは すべて開いている扱い） */
+export async function fetchSanmonModes(config: ResolveConfig, studentId: string) {
+  const r = await rpc<SanmonModes | null>(config, 'sanmon_modes', { p_student_id: studentId });
+  return r.ok ? { ok: true as const, modes: r.data ?? {} } : r;
+}
