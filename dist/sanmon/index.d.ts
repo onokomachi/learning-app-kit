@@ -40,7 +40,7 @@ export interface SanmonUnitRule {
     /** 本番テストの記録の skill_id（省略＝'mock-test'） */
     testSkill?: string;
 }
-/** SANMON の14の町。並びは SANMON の学習順（MATH_CATEGORIES）と同じ */
+/** SANMON の町（はじめ14、2026-10 に 垂直・平行と四角形 を足して15）。並びは SANMON の学習順（MATH_CATEGORIES）と同じ */
 export declare const SANMON_UNITS: SanmonUnitRule[];
 /** サーバ（sanmon_status）が返す、アプリごとの記録 */
 export interface SanmonAppRecord {

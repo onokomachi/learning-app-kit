@@ -44,12 +44,14 @@ export interface SanmonUnitRule {
   testSkill?: string;
 }
 
-/** SANMON の14の町。並びは SANMON の学習順（MATH_CATEGORIES）と同じ */
+/** SANMON の町（はじめ14、2026-10 に 垂直・平行と四角形 を足して15）。並びは SANMON の学習順（MATH_CATEGORIES）と同じ */
 export const SANMON_UNITS: SanmonUnitRule[] = [
   { key: 'bignum', name: '大きい数のしくみ' },
   { key: 'graph', name: '折れ線グラフと表' },
   { key: 'div1', name: 'わり算の筆算(÷1けた)', appId: 'hissan' },
   { key: 'angle', name: '角の大きさ' },
+  // 2026-10 に足した町（ヘイコウ台地）。SANMON の問題は このアプリと同じ画面で出す
+  { key: 'suihei', name: '垂直・平行と四角形', appId: 'suihei' },
   { key: 'decimal', name: '小数のしくみ', appId: 'syousu', modules: ['place-value', 'number-line', 'decimal-addsub'] },
   { key: 'div2', name: 'わり算の筆算(÷2けた)', appId: 'hissan' },
   { key: 'rounding', name: 'がい数', appId: 'gaisu' },
