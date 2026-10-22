@@ -120,4 +120,49 @@ export declare function loadSanmonSave(config: ResolveConfig, studentId: string)
     data: Record<string, unknown> | null;
 }>;
 export declare function saveSanmonSave(config: ResolveConfig, studentId: string, data: Record<string, unknown>): Promise<boolean>;
+/**
+ * 先生が開け閉めできる SANMON のモード。サーバの表 sanmon_mode_settings の modes のキー。
+ * 「きろく」は いつも開いている（自分の記録を見るだけなので）。
+ */
+export declare const SANMON_MODES: readonly [{
+    readonly key: "adventure";
+    readonly label: "ぼうけん";
+    readonly desc: "3Dの町を歩いて、モンスターと算数バトル";
+}, {
+    readonly key: "speed";
+    readonly label: "スピードデュエル";
+    readonly desc: "コンピュータと早押し";
+}, {
+    readonly key: "monster";
+    readonly label: "モンスター対戦（コンピュータ）";
+    readonly desc: "つかまえたモンスターで、コンピュータと早押し";
+}, {
+    readonly key: "class_duel";
+    readonly label: "クラス対戦";
+    readonly desc: "同じ学級の友だちと、モンスターの問題で早押し";
+}, {
+    readonly key: "practice";
+    readonly label: "練習";
+    readonly desc: "分野をえらんで問題をとく";
+}, {
+    readonly key: "review";
+    readonly label: "復習";
+    readonly desc: "まちがえた問題を ちょうどよいころに";
+}, {
+    readonly key: "mock_test";
+    readonly label: "本番テスト";
+    readonly desc: "学校のテストの形で";
+}];
+export type SanmonModeKey = (typeof SANMON_MODES)[number]['key'];
+/** 書いていないモードは開いている（false のときだけ閉じる） */
+export type SanmonModes = Partial<Record<SanmonModeKey, boolean>>;
+export declare function isModeOpen(modes: SanmonModes | null | undefined, key: SanmonModeKey): boolean;
+/** 自分の学級のモードの開け閉めを読む（読めないときは すべて開いている扱い） */
+export declare function fetchSanmonModes(config: ResolveConfig, studentId: string): Promise<{
+    ok: false;
+    message: string;
+} | {
+    ok: true;
+    modes: Partial<Record<"adventure" | "speed" | "monster" | "class_duel" | "practice" | "review" | "mock_test", boolean>>;
+}>;
 //# sourceMappingURL=index.d.ts.map
