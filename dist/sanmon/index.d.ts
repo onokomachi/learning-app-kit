@@ -174,11 +174,11 @@ export declare const SANMON_MODES: readonly [{
 }, {
     readonly key: "monster";
     readonly label: "モンスター対戦（コンピュータ）";
-    readonly desc: "つかまえたモンスターで、コンピュータと早押し";
+    readonly desc: "つかまえたモンスターのパーティ（3匹か5匹）で、コンピュータと対戦";
 }, {
     readonly key: "class_duel";
     readonly label: "クラス対戦";
-    readonly desc: "同じ学級の友だちと、モンスターの問題で早押し";
+    readonly desc: "同じ学級の友だちと、モンスターのパーティで対戦";
 }, {
     readonly key: "practice";
     readonly label: "練習";
