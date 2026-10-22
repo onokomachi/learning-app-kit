@@ -259,8 +259,8 @@ export async function saveSanmonSave(config: ResolveConfig, studentId: string, d
 export const SANMON_MODES = [
   { key: 'adventure', label: 'ぼうけん', desc: '3Dの町を歩いて、モンスターと算数バトル' },
   { key: 'speed', label: 'スピードデュエル', desc: 'コンピュータと早押し' },
-  { key: 'monster', label: 'モンスター対戦（コンピュータ）', desc: 'つかまえたモンスターで、コンピュータと早押し' },
-  { key: 'class_duel', label: 'クラス対戦', desc: '同じ学級の友だちと、モンスターの問題で早押し' },
+  { key: 'monster', label: 'モンスター対戦（コンピュータ）', desc: 'つかまえたモンスターのパーティ（3匹か5匹）で、コンピュータと対戦' },
+  { key: 'class_duel', label: 'クラス対戦', desc: '同じ学級の友だちと、モンスターのパーティで対戦' },
   { key: 'practice', label: '練習', desc: '分野をえらんで問題をとく' },
   { key: 'review', label: '復習', desc: 'まちがえた問題を ちょうどよいころに' },
   { key: 'mock_test', label: '本番テスト', desc: '学校のテストの形で' },
