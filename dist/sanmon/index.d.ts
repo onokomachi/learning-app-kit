@@ -80,6 +80,45 @@ export interface SanmonUnitProgress {
 }
 /** 町ごとの「あと どれだけ」。判定はこの関数だけでする */
 export declare function sanmonUnits(status: SanmonStatus | null, catalogs?: Record<string, AppCatalog>): SanmonUnitProgress[];
+/**
+ * 単元の「かけら」とレベルの上限の数え方（2026-10 先生と決めた）。
+ *
+ * モンスターのレベルの上限は、その単元のかけらでしか上がらない。かけらは単元アプリでの成果でもらう
+ * （本番テストで8割の日・実力の階段で高い段まで）。アプリが無い単元は SANMON の練習（5回連続ノーミスの項目）でもらう。
+ * 上限まで育てるには SANMON で そのモンスターの問題を解く。だから「アプリでがんばる」と「SANMON で練習する」の両方に理由ができる。
+ * かけらで直接強くはしない（強さがふくらみすぎて、すぐにバランスが崩れるため）。
+ */
+export declare const SANMON_GROWTH: {
+    /** かけらが0のときの上限 */
+    readonly baseCap: 20;
+    /** かけら1つで上がる上限 */
+    readonly capPerShard: 5;
+    readonly maxCap: 60;
+    /** 本番テストで8割の日は、5日ぶんまで数える */
+    readonly testShardsMax: 5;
+    /** 実力の階段：この割合の段まで登るごとに1つ（半分・4分の3・てっぺん） */
+    readonly trialMilestones: readonly number[];
+    /** アプリが無い単元：SANMON の練習で、この数ぶんに分けてもらう */
+    readonly practiceShardsMax: 8;
+};
+export interface SanmonShards {
+    key: string;
+    name: string;
+    /** その単元のかけらの数 */
+    shards: number;
+    /** その単元のモンスターのレベルの上限 */
+    cap: number;
+    /** どこでもらったか（画面で「つぎは ここで もらえるよ」に使う） */
+    from: {
+        test: number;
+        trial: number;
+        practice: number;
+    };
+}
+/** かけらの数 → レベルの上限 */
+export declare function levelCapFor(shards: number): number;
+/** 単元ごとの かけら と レベルの上限。サーバの記録（sanmon_status）から決めるので、端末を変えても同じ */
+export declare function sanmonShards(status: SanmonStatus | null, catalogs?: Record<string, AppCatalog>): SanmonShards[];
 /** 開いている町の記号（SANMON の UNIT_KEYS）の集合 */
 export declare function openUnitKeys(units: readonly SanmonUnitProgress[]): Set<string>;
 /** スタミナと、町を開ける判定に使う記録を読む */

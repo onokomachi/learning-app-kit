@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, type SanmonStatus } from './index.js';
+import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus } from './index.js';
 import { CATALOGS } from '../catalog/index.js';
 
 const empty: SanmonStatus = { stamina: 0, earnedToday: 0, apps: {} };
@@ -41,4 +41,27 @@ test('モードの開け閉め: 書いていないモードは開いている・
   assert.equal(isModeOpen({ speed: false }, 'speed'), false);
   assert.equal(isModeOpen({ speed: false }, 'adventure'), true);
   assert.equal(new Set(SANMON_MODES.map((m) => m.key)).size, SANMON_MODES.length, 'キーが重ならない');
+});
+
+test('かけら: アプリの単元はテストの日（5日まで）と階段の段、アプリが無い単元は SANMON の練習', () => {
+  const none = sanmonShards(null);
+  assert.ok(none.every((u) => u.shards === 0 && u.cap === SANMON_GROWTH.baseCap));
+  const sanmonBig = CATALOGS.sanmon!.modules.find((m) => m.module_id === 'bignum')!.skills.map((s) => s.skill_id);
+  const st: SanmonStatus = {
+    stamina: 0, earnedToday: 0,
+    apps: {
+      gaisu: { mastered: [], tests: { 'mock-test': 9 }, trial: 0.75, solo_days: 3 },
+      sanmon: { mastered: sanmonBig.slice(0, Math.ceil(sanmonBig.length / 2)), tests: {}, trial: 0, solo_days: 0 },
+    },
+  };
+  const by = Object.fromEntries(sanmonShards(st).map((u) => [u.key, u]));
+  assert.deepEqual(by.rounding!.from, { test: 5, trial: 2, practice: 0 });
+  assert.equal(by.rounding!.shards, 7);
+  assert.equal(by.rounding!.cap, 55);
+  assert.ok(by.bignum!.from.practice >= 4 && by.bignum!.from.practice <= 5);
+  assert.equal(by.div1!.shards, 0);
+  // 町が開く条件（テスト3日・階段半分）をそろえた単元は、上限40まで育てられる
+  const opened = sanmonShards({ ...st, apps: { hissan: { mastered: [], tests: { 'mock-test': 3 }, trial: 0.5, solo_days: 3 } } });
+  assert.equal(opened.find((u) => u.key === 'div1')!.cap, 40);
+  assert.equal(levelCapFor(100), SANMON_GROWTH.maxCap);
 });

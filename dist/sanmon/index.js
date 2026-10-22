@@ -79,6 +79,56 @@ export function sanmonUnits(status, catalogs = CATALOGS) {
  */
 const TRIAL_FLOORS = { bai: 7, karakuri: 8, suihei: 8 };
 function trialFloors(appId) { return TRIAL_FLOORS[appId] ?? 8; }
+/* ------------------------------------------------------------------ */
+/* モンスターの育て方：かけら と レベルの上限                           */
+/* ------------------------------------------------------------------ */
+/**
+ * 単元の「かけら」とレベルの上限の数え方（2026-10 先生と決めた）。
+ *
+ * モンスターのレベルの上限は、その単元のかけらでしか上がらない。かけらは単元アプリでの成果でもらう
+ * （本番テストで8割の日・実力の階段で高い段まで）。アプリが無い単元は SANMON の練習（5回連続ノーミスの項目）でもらう。
+ * 上限まで育てるには SANMON で そのモンスターの問題を解く。だから「アプリでがんばる」と「SANMON で練習する」の両方に理由ができる。
+ * かけらで直接強くはしない（強さがふくらみすぎて、すぐにバランスが崩れるため）。
+ */
+export const SANMON_GROWTH = {
+    /** かけらが0のときの上限 */
+    baseCap: 20,
+    /** かけら1つで上がる上限 */
+    capPerShard: 5,
+    maxCap: 60,
+    /** 本番テストで8割の日は、5日ぶんまで数える */
+    testShardsMax: 5,
+    /** 実力の階段：この割合の段まで登るごとに1つ（半分・4分の3・てっぺん） */
+    trialMilestones: [0.5, 0.75, 1],
+    /** アプリが無い単元：SANMON の練習で、この数ぶんに分けてもらう */
+    practiceShardsMax: 8,
+};
+/** かけらの数 → レベルの上限 */
+export function levelCapFor(shards) {
+    return Math.min(SANMON_GROWTH.maxCap, SANMON_GROWTH.baseCap + SANMON_GROWTH.capPerShard * Math.max(0, Math.floor(shards)));
+}
+/** 単元ごとの かけら と レベルの上限。サーバの記録（sanmon_status）から決めるので、端末を変えても同じ */
+export function sanmonShards(status, catalogs = CATALOGS) {
+    const sanmonMastered = new Set(status?.apps[SANMON_APP_ID]?.mastered ?? []);
+    const sanmonCatalog = catalogs[SANMON_APP_ID];
+    return SANMON_UNITS.map((u) => {
+        let test = 0;
+        let trial = 0;
+        let practice = 0;
+        if (u.appId) {
+            const rec = status?.apps[u.appId];
+            test = Math.min(SANMON_GROWTH.testShardsMax, rec?.tests[u.testSkill ?? 'mock-test'] ?? 0);
+            trial = SANMON_GROWTH.trialMilestones.filter((m) => (rec?.trial ?? 0) + 1e-9 >= m).length;
+        }
+        else {
+            const skills = sanmonCatalog ? skillsOf(sanmonCatalog, [u.key]) : [];
+            const done = skills.filter((s) => sanmonMastered.has(s)).length;
+            practice = skills.length ? Math.floor((SANMON_GROWTH.practiceShardsMax * done) / skills.length) : 0;
+        }
+        const shards = test + trial + practice;
+        return { key: u.key, name: u.name, shards, cap: levelCapFor(shards), from: { test, trial, practice } };
+    });
+}
 /** 開いている町の記号（SANMON の UNIT_KEYS）の集合 */
 export function openUnitKeys(units) {
     return new Set(units.filter((u) => u.open).map((u) => u.key));
