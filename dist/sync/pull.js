@@ -237,4 +237,26 @@ export function testModes(rows) {
         .map(([mode, v]) => ({ mode, ...v }))
         .sort((a, b) => b.count - a.count);
 }
+/**
+ * 1回ぶんのテストの、問題ごとの正誤を読む（my_test_detail）。
+ * 一覧（fetchMyTests）には入れない——ハブを開くたびに全部の答案を読むと通信量がふえるので、押した1回ぶんだけ読む（1回5KBほど）。
+ */
+export async function fetchMyTestDetail(config, studentId, eventId) {
+    const { supabaseUrl, supabaseKey } = config;
+    if (!supabaseUrl || !supabaseKey || !studentId)
+        return { ok: false, message: 'がっきゅうコードを 入れると 見られるよ' };
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/my_test_detail`, {
+            method: 'POST',
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ p_student_id: studentId, p_event_id: eventId }),
+        });
+        if (!res.ok)
+            return { ok: false, message: 'テストの なかみが よみこめませんでした' };
+        return { ok: true, steps: (await res.json()) };
+    }
+    catch {
+        return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
 //# sourceMappingURL=pull.js.map

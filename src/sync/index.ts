@@ -17,12 +17,12 @@ export type { EventRow } from './events.js';
 export {
   fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween,
   fetchMySkillTotals, weeklyTrend, weekStart,
-  fetchMyTests, testTrend, testModes,
+  fetchMyTests, testTrend, testModes, fetchMyTestDetail,
 } from './pull.js';
 export type {
   MySkillRow, MyProgressResult, MyActivityRow, MyActivityResult, ActivityTotals,
   MySkillTotalRow, MySkillTotalsResult, WeekPoint,
-  MyTestRow, MyTestsResult, TestPoint,
+  MyTestRow, MyTestsResult, TestPoint, MyTestStep,
 } from './pull.js';
 export {
   isSchoolTime, currentPlayMode, needsPlayModeAsk, setPlayMode, forceSolo,
