@@ -369,3 +369,42 @@ export function testModes(rows: readonly MyTestRow[]): { mode: string; count: nu
     .map(([mode, v]) => ({ mode, ...v }))
     .sort((a, b) => b.count - a.count);
 }
+
+/** 本番テスト1回ぶんの、問題ごとの正誤（子ども用ハブで、テストを押したときだけ読む） */
+export interface MyTestStep {
+  daimon: string | null;
+  sub: string | null;
+  title: string | null;
+  section: string | null;
+  /** 問題（短い文） */
+  q: string | null;
+  /** 正しい答え */
+  a: string | null;
+  correct: boolean;
+  earned: number | null;
+  points: number | null;
+}
+
+/**
+ * 1回ぶんのテストの、問題ごとの正誤を読む（my_test_detail）。
+ * 一覧（fetchMyTests）には入れない——ハブを開くたびに全部の答案を読むと通信量がふえるので、押した1回ぶんだけ読む（1回5KBほど）。
+ */
+export async function fetchMyTestDetail(
+  config: ResolveConfig,
+  studentId: string | null | undefined,
+  eventId: string,
+): Promise<{ ok: true; steps: MyTestStep[] } | { ok: false; message: string }> {
+  const { supabaseUrl, supabaseKey } = config;
+  if (!supabaseUrl || !supabaseKey || !studentId) return { ok: false, message: 'がっきゅうコードを 入れると 見られるよ' };
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/my_test_detail`, {
+      method: 'POST',
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_student_id: studentId, p_event_id: eventId }),
+    });
+    if (!res.ok) return { ok: false, message: 'テストの なかみが よみこめませんでした' };
+    return { ok: true, steps: (await res.json()) as MyTestStep[] };
+  } catch {
+    return { ok: false, message: 'ネットにつながっていないようです' };
+  }
+}

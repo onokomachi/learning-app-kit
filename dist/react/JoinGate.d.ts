@@ -9,6 +9,18 @@ export interface JoinFormProps {
     onClose?: () => void;
 }
 /**
+ * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
+ * 答え合わせはサーバ（verifyUnlock）。あっていたら onUnlocked。
+ */
+export declare function UnlockPrompt({ config, student, action, onUnlocked, onClose }: {
+    config: ResolveConfig;
+    student: StudentIdentity;
+    /** 何をするのか（「ばんごうを かえる」など） */
+    action: string;
+    onUnlocked: () => void;
+    onClose: () => void;
+}): import("react").JSX.Element;
+/**
  * まだ決めていない子にだけ、はじめの1回だけ出す。
  * 名乗った子にも、断った子にも、二度と出ない。
  *

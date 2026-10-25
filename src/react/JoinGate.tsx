@@ -15,7 +15,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent,
+  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock,
   type ResolveConfig, type StudentIdentity,
 } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
@@ -75,9 +75,13 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ student: StudentIdentity; claimed: number } | null>(null);
+  // 入れまちがいを減らすため、送る前に1回「これで いい？」と聞く
+  const [confirming, setConfirming] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!confirming) { setError(null); setConfirming(true); return; }
+    setConfirming(false);
     setBusy(true); setError(null);
     const r = await resolveStudent(config, code, Number(num));
     if (!r.ok) { setBusy(false); setError(r.message); return; }
@@ -99,6 +103,20 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
         </p>
         <button type="button" style={S.primary} onClick={() => onClose?.()}>とじる</button>
       </div>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <form onSubmit={submit}>
+        <h2 style={S.h}>これで いい？</h2>
+        <p style={{ ...S.p, fontSize: 15, color: '#0f2540' }}>
+          がっきゅうコード <b>{code.trim()}</b> の <b style={{ fontSize: 20 }}>{num}</b> ばん
+        </p>
+        <p style={S.note}>まちがえると、ほかの人の きろくに なってしまうよ。あとから かえるには せんせいの パスワードが いるよ。</p>
+        <button type="submit" style={S.primary}>はい、はじめる</button>
+        <button type="button" style={S.ghost} onClick={() => setConfirming(false)}>なおす</button>
+      </form>
     );
   }
 
@@ -140,6 +158,51 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
         コードが なくても ぜんぶ つかえるよ。あとから 「せってい」で 入れることも できるよ。
       </p>
     </form>
+  );
+}
+
+/**
+ * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
+ * 答え合わせはサーバ（verifyUnlock）。あっていたら onUnlocked。
+ */
+export function UnlockPrompt({ config, student, action, onUnlocked, onClose }: {
+  config: ResolveConfig;
+  student: StudentIdentity;
+  /** 何をするのか（「ばんごうを かえる」など） */
+  action: string;
+  onUnlocked: () => void;
+  onClose: () => void;
+}) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError(null);
+    const r = await verifyUnlock(config, student.joinCode, code);
+    setBusy(false);
+    if (r.ok) onUnlocked();
+    else { setError(r.message); setCode(''); }
+  };
+  return (
+    <div style={S.scrim} role="dialog" aria-label="せんせいの パスワード">
+      <div style={S.card}>
+        <form onSubmit={submit}>
+          <h2 style={S.h}>せんせいの パスワード</h2>
+          <p style={S.p}>
+            いまは <b>{student.joinCode}　{student.number}ばん</b>。{action}には、せんせいに パスワードを 入れてもらってね。
+          </p>
+          <input style={{ ...S.input, letterSpacing: '0.3em', marginBottom: 14 }} value={code} required autoFocus
+            type="password" inputMode="numeric" autoComplete="off" aria-label="パスワード"
+            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))} />
+          <button type="submit" style={{ ...S.primary, opacity: busy ? 0.6 : 1 }} disabled={busy || !code}>
+            {busy ? 'たしかめているよ…' : 'OK'}
+          </button>
+          <button type="button" style={S.ghost} onClick={onClose}>やめる</button>
+          {error && <p style={S.err}>{error}</p>}
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -233,6 +296,8 @@ export function JoinGate({ config, chip = 'bottom-right' }: {
 export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
   const [student, setStudent] = useState<StudentIdentity | null>(() => getStudent());
   const [open, setOpen] = useState(false);
+  // 名乗った子が変えるときは、先に先生のパスワード（なりすまし・ぬけて戻る のいたずらを防ぐ）
+  const [unlock, setUnlock] = useState<'rejoin' | 'clear' | null>(null);
 
   if (!config.supabaseUrl || !config.supabaseKey) return null;
 
@@ -252,7 +317,7 @@ export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
               : 'まだ 入れていないよ（きろくは この たんまつだけ）'}
           </p>
         </div>
-        <button type="button" onClick={() => setOpen(true)}
+        <button type="button" onClick={() => (student ? setUnlock('rejoin') : setOpen(true))}
           style={{
             border: 0, borderRadius: 10, background: '#0ea5e9', color: '#fff',
             fontWeight: 900, fontSize: 13, padding: '9px 14px', cursor: 'pointer',
@@ -261,7 +326,7 @@ export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
         </button>
         {student && (
           <button type="button"
-            onClick={() => { clearStudent(); setStudent(null); }}
+            onClick={() => setUnlock('clear')}
             style={{
               border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff',
               color: '#8496ad', fontWeight: 800, fontSize: 12, padding: '9px 12px', cursor: 'pointer',
@@ -270,6 +335,17 @@ export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
           </button>
         )}
       </div>
+
+      {unlock && student && (
+        <UnlockPrompt config={config} student={student}
+          action={unlock === 'clear' ? 'けすの' : '入れなおすの'}
+          onClose={() => setUnlock(null)}
+          onUnlocked={() => {
+            const what = unlock;
+            setUnlock(null);
+            if (what === 'clear') { clearStudent(); setStudent(null); } else setOpen(true);
+          }} />
+      )}
 
       {open && (
         <div style={S.scrim} role="dialog" aria-label="がっきゅうコードの入力">

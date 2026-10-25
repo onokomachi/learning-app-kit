@@ -142,6 +142,33 @@ export async function resolveStudent(config, joinCode, number) {
         return { ok: false, message: 'ネットにつながっていないようです' };
     }
 }
+/* ---------- 名乗りを変える前の、先生のパスワード ---------- */
+/**
+ * 名乗った子が「けす」「入れなおす」をするときに、先生のパスワードを確かめる（2026-10 先生と決めた）。
+ *
+ * すぐに変えられると、ほかの子になりすます・ぬけて戻る、のいたずらになる。子どもからの申告で
+ * 先生がパスワードを入れて変える。パスワードはサーバにハッシュだけがあり、答え合わせもサーバでする
+ * （プログラムの中に書くと、ブラウザで中を見られる）。学級ごとに PRISM で変えられる。10分に10回まちがえると待たされる。
+ */
+export async function verifyUnlock(config, joinCode, code) {
+    const { supabaseUrl, supabaseKey } = config;
+    if (!supabaseUrl || !supabaseKey)
+        return { ok: false, message: '接続先が設定されていません' };
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_unlock`, {
+            method: 'POST',
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ p_join_code: joinCode, p_code: code }),
+        });
+        if (!res.ok)
+            return { ok: false, message: 'うまくいきませんでした。もう一度ためしてください' };
+        const body = (await res.json());
+        return body?.ok ? { ok: true } : { ok: false, message: body?.message ?? 'パスワードが ちがうよ' };
+    }
+    catch {
+        return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
 /**
  * この端末がそれまで匿名で送っていた記録を、名乗った子のものにする。
  *

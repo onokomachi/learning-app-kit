@@ -178,4 +178,29 @@ export declare function testModes(rows: readonly MyTestRow[]): {
     count: number;
     max: number;
 }[];
+/** 本番テスト1回ぶんの、問題ごとの正誤（子ども用ハブで、テストを押したときだけ読む） */
+export interface MyTestStep {
+    daimon: string | null;
+    sub: string | null;
+    title: string | null;
+    section: string | null;
+    /** 問題（短い文） */
+    q: string | null;
+    /** 正しい答え */
+    a: string | null;
+    correct: boolean;
+    earned: number | null;
+    points: number | null;
+}
+/**
+ * 1回ぶんのテストの、問題ごとの正誤を読む（my_test_detail）。
+ * 一覧（fetchMyTests）には入れない——ハブを開くたびに全部の答案を読むと通信量がふえるので、押した1回ぶんだけ読む（1回5KBほど）。
+ */
+export declare function fetchMyTestDetail(config: ResolveConfig, studentId: string | null | undefined, eventId: string): Promise<{
+    ok: true;
+    steps: MyTestStep[];
+} | {
+    ok: false;
+    message: string;
+}>;
 //# sourceMappingURL=pull.d.ts.map
