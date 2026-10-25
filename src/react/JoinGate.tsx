@@ -15,7 +15,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock,
+  resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock, verifyDemoCode, DEMO_JOIN,
   type ResolveConfig, type StudentIdentity,
 } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
@@ -63,10 +63,15 @@ export interface JoinFormProps {
   onSkip?: () => void;
   /** 設定から開いたときの閉じる操作 */
   onClose?: () => void;
+  /**
+   * デモモードに入る（学級コード 0000・番号 0 ＋ 先生のパスワード）。渡したアプリだけで使える（SANMON のアプリ紹介用）。
+   * 名乗りはしない（記録は送られない）。
+   */
+  onDemo?: () => void;
 }
 
 /** 入力フォームの中身だけ。ゲートにも設定パネルにも同じものを使う */
-function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
+function JoinForm({ config, onDone, onSkip, onClose, onDemo }: JoinFormProps) {
   const [code, setCode] = useState(() => getStudent()?.joinCode ?? '');
   const [num, setNum] = useState(() => {
     const n = getStudent()?.number;
@@ -78,8 +83,13 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
   // 入れまちがいを減らすため、送る前に1回「これで いい？」と聞く
   const [confirming, setConfirming] = useState(false);
 
+  const [demo, setDemo] = useState<'ask' | null>(null);
+  const [demoCode, setDemoCode] = useState('');
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // デモモードの合いことば（0000・0）なら、名乗らずに先生のパスワードを聞く
+    if (onDemo && code.trim() === DEMO_JOIN.code && Number(num) === DEMO_JOIN.number) { setError(null); setDemo('ask'); return; }
     if (!confirming) { setError(null); setConfirming(true); return; }
     setConfirming(false);
     setBusy(true); setError(null);
@@ -103,6 +113,31 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
         </p>
         <button type="button" style={S.primary} onClick={() => onClose?.()}>とじる</button>
       </div>
+    );
+  }
+
+  if (demo === 'ask' && onDemo) {
+    const go = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setBusy(true); setError(null);
+      const r = await verifyDemoCode(config, demoCode);
+      setBusy(false);
+      if (r.ok) onDemo();
+      else { setError(r.message); setDemoCode(''); }
+    };
+    return (
+      <form onSubmit={go}>
+        <h2 style={S.h}>デモモード</h2>
+        <p style={S.p}>アプリの しょうかい用。すべての町が ひらき、きろくは どこにも おくられないよ。せんせいの パスワードを 入れてね。</p>
+        <input style={{ ...S.input, letterSpacing: '0.3em', marginBottom: 14 }} value={demoCode} required autoFocus
+          type="password" inputMode="numeric" autoComplete="off" aria-label="パスワード"
+          onChange={(e) => setDemoCode(e.target.value.replace(/[^0-9]/g, ''))} />
+        <button type="submit" style={{ ...S.primary, opacity: busy ? 0.6 : 1 }} disabled={busy || !demoCode}>
+          {busy ? 'たしかめているよ…' : 'デモを はじめる'}
+        </button>
+        <button type="button" style={S.ghost} onClick={() => { setDemo(null); setError(null); }}>もどる</button>
+        {error && <p style={S.err}>{error}</p>}
+      </form>
     );
   }
 
@@ -135,7 +170,7 @@ function JoinForm({ config, onDone, onSkip, onClose }: JoinFormProps) {
       <div style={{ marginBottom: 16 }}>
         <label style={S.label} htmlFor="lak-join-num">しゅっせき番号</label>
         <input id="lak-join-num" style={S.input} value={num} required
-          type="number" inputMode="numeric" min={1} max={100}
+          type="number" inputMode="numeric" min={onDemo ? 0 : 1} max={100}
           onChange={(e) => setNum(e.target.value)} placeholder="12" />
       </div>
 
@@ -293,7 +328,7 @@ export function JoinGate({ config, chip = 'bottom-right' }: {
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。
  * 「コードを入れずに つかう」を選んだ子の、あとからの入口になる。
  */
-export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
+export function JoinSettingsRow({ config, onDemo }: { config: ResolveConfig; onDemo?: () => void }) {
   const [student, setStudent] = useState<StudentIdentity | null>(() => getStudent());
   const [open, setOpen] = useState(false);
   // 名乗った子が変えるときは、先に先生のパスワード（なりすまし・ぬけて戻る のいたずらを防ぐ）
@@ -352,7 +387,8 @@ export function JoinSettingsRow({ config }: { config: ResolveConfig }) {
           <div style={S.card}>
             <JoinForm config={config}
               onDone={(s) => setStudent(s)}
-              onClose={() => setOpen(false)} />
+              onClose={() => setOpen(false)}
+              onDemo={onDemo ? () => { setOpen(false); onDemo(); } : undefined} />
           </div>
         </div>
       )}
