@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  getStudent, clearStudent, resolveStudent, getJoinChoice, chooseAnonymous, claimDevice,
+  getStudent, clearStudent, resolveStudent, getJoinChoice, chooseAnonymous, claimDevice, verifyUnlock,
 } from './student.js';
 import { pushSkillState, createPusher } from './push.js';
 import { createSyncedStorage } from './storage.js';
@@ -238,4 +238,18 @@ test('名乗っていなければ、claimDevice は何も送らない', async ()
   const r = await claimDevice(CFG);
   assert.equal(r.ok, false);
   assert.equal(called, false);
+});
+
+test('名乗りを変える前の先生のパスワードは、サーバで確かめる（ちがえば理由を返す）', async () => {
+  let sent: any = null;
+  (globalThis as any).fetch = async (u: string, init: any) => {
+    sent = { u, body: JSON.parse(init.body) };
+    return { ok: true, json: async () => (sent.body.p_code === '1234' ? { ok: true } : { ok: false, message: 'パスワードが ちがうよ' }) } as any;
+  };
+  assert.deepEqual(await verifyUnlock(CFG, '4-2', '1234'), { ok: true });
+  assert.match(sent.u, /rpc\/verify_unlock$/);
+  assert.deepEqual(sent.body, { p_join_code: '4-2', p_code: '1234' });
+  assert.deepEqual(await verifyUnlock(CFG, '4-2', '9'), { ok: false, message: 'パスワードが ちがうよ' });
+  (globalThis as any).fetch = async () => { throw new Error('offline'); };
+  assert.equal((await verifyUnlock(CFG, '4-2', '1234')).ok, false, 'ネットが切れていたら通さない');
 });

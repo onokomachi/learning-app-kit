@@ -4,7 +4,7 @@ export type { StateStorage } from './state-storage.js';
 export type { SyncConfig, SyncableState, LogLike } from './types.js';
 export { pushSkillState, createPusher } from './push.js';
 export type { PushRow, PushResult, PushConfig } from './push.js';
-export { getStudent, clearStudent, resolveStudent, subscribeStudent, getJoinChoice, chooseAnonymous, claimDevice, } from './student.js';
+export { getStudent, clearStudent, resolveStudent, verifyUnlock, subscribeStudent, getJoinChoice, chooseAnonymous, claimDevice, } from './student.js';
 export type { StudentIdentity, ResolveConfig, ResolveResult, JoinChoice, ClaimResult, } from './student.js';
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
 export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';

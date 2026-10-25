@@ -5,7 +5,7 @@ export type { SyncConfig, SyncableState, LogLike } from './types.js';
 export { pushSkillState, createPusher } from './push.js';
 export type { PushRow, PushResult, PushConfig } from './push.js';
 export {
-  getStudent, clearStudent, resolveStudent, subscribeStudent,
+  getStudent, clearStudent, resolveStudent, verifyUnlock, subscribeStudent,
   getJoinChoice, chooseAnonymous, claimDevice,
 } from './student.js';
 export type {

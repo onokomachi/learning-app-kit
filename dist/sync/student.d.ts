@@ -46,6 +46,19 @@ export type ResolveResult = {
  * エラーはそのまま子どもに見せられる日本語で返す。
  */
 export declare function resolveStudent(config: ResolveConfig, joinCode: string, number: number): Promise<ResolveResult>;
+/**
+ * 名乗った子が「けす」「入れなおす」をするときに、先生のパスワードを確かめる（2026-10 先生と決めた）。
+ *
+ * すぐに変えられると、ほかの子になりすます・ぬけて戻る、のいたずらになる。子どもからの申告で
+ * 先生がパスワードを入れて変える。パスワードはサーバにハッシュだけがあり、答え合わせもサーバでする
+ * （プログラムの中に書くと、ブラウザで中を見られる）。学級ごとに PRISM で変えられる。10分に10回まちがえると待たされる。
+ */
+export declare function verifyUnlock(config: ResolveConfig, joinCode: string, code: string): Promise<{
+    ok: true;
+} | {
+    ok: false;
+    message: string;
+}>;
 export interface ClaimResult {
     ok: boolean;
     /** その端末から拾えた件数。名乗るのが初めてなら、これまでの全部が入る */
