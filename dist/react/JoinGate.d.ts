@@ -7,6 +7,11 @@ export interface JoinFormProps {
     onSkip?: () => void;
     /** 設定から開いたときの閉じる操作 */
     onClose?: () => void;
+    /**
+     * デモモードに入る（学級コード 0000・番号 0 ＋ 先生のパスワード）。渡したアプリだけで使える（SANMON のアプリ紹介用）。
+     * 名乗りはしない（記録は送られない）。
+     */
+    onDemo?: () => void;
 }
 /**
  * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
@@ -41,7 +46,8 @@ export declare function JoinGate({ config, chip }: {
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。
  * 「コードを入れずに つかう」を選んだ子の、あとからの入口になる。
  */
-export declare function JoinSettingsRow({ config }: {
+export declare function JoinSettingsRow({ config, onDemo }: {
     config: ResolveConfig;
+    onDemo?: () => void;
 }): import("react").JSX.Element | null;
 //# sourceMappingURL=JoinGate.d.ts.map

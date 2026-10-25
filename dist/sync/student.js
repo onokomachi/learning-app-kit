@@ -170,6 +170,31 @@ export async function verifyUnlock(config, joinCode, code) {
     }
 }
 /**
+ * デモモード（学級コード 0000・番号 0。SANMON のアプリ紹介用）に入る前の、先生のパスワード（サーバの verify_demo）。
+ * どれかの学級で先生が決めたパスワードと合えば通る。子どもだけでは入れないようにするため。
+ */
+export async function verifyDemoCode(config, code) {
+    const { supabaseUrl, supabaseKey } = config;
+    if (!supabaseUrl || !supabaseKey)
+        return { ok: false, message: '接続先が設定されていません' };
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_demo`, {
+            method: 'POST',
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ p_code: code }),
+        });
+        if (!res.ok)
+            return { ok: false, message: 'うまくいきませんでした。もう一度ためしてください' };
+        const body = (await res.json());
+        return body?.ok ? { ok: true } : { ok: false, message: body?.message ?? 'パスワードが ちがうよ' };
+    }
+    catch {
+        return { ok: false, message: 'ネットにつながっていないようです' };
+    }
+}
+/** デモモードの合いことば（学級コード・番号） */
+export const DEMO_JOIN = { code: '0000', number: 0 };
+/**
  * この端末がそれまで匿名で送っていた記録を、名乗った子のものにする。
  *
  * 端末に残っているログは直近200件までなので、送り直しだけでは

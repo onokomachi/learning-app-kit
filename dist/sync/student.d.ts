@@ -59,6 +59,21 @@ export declare function verifyUnlock(config: ResolveConfig, joinCode: string, co
     ok: false;
     message: string;
 }>;
+/**
+ * デモモード（学級コード 0000・番号 0。SANMON のアプリ紹介用）に入る前の、先生のパスワード（サーバの verify_demo）。
+ * どれかの学級で先生が決めたパスワードと合えば通る。子どもだけでは入れないようにするため。
+ */
+export declare function verifyDemoCode(config: ResolveConfig, code: string): Promise<{
+    ok: true;
+} | {
+    ok: false;
+    message: string;
+}>;
+/** デモモードの合いことば（学級コード・番号） */
+export declare const DEMO_JOIN: {
+    readonly code: "0000";
+    readonly number: 0;
+};
 export interface ClaimResult {
     ok: boolean;
     /** その端末から拾えた件数。名乗るのが初めてなら、これまでの全部が入る */

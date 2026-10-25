@@ -15,7 +15,7 @@ import { jsxs as _jsxs, jsx as _jsx, Fragment as _Fragment } from "react/jsx-run
  * クラス名に頼ると、どれかのアプリで文字が背景に沈む。
  */
 import { useEffect, useState } from 'react';
-import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock, } from '../sync/index.js';
+import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock, verifyDemoCode, DEMO_JOIN, } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
 const S = {
     scrim: {
@@ -52,7 +52,7 @@ const S = {
     note: { marginTop: 14, fontSize: 11, lineHeight: 1.7, color: '#8496ad' },
 };
 /** 入力フォームの中身だけ。ゲートにも設定パネルにも同じものを使う */
-function JoinForm({ config, onDone, onSkip, onClose }) {
+function JoinForm({ config, onDone, onSkip, onClose, onDemo }) {
     const [code, setCode] = useState(() => getStudent()?.joinCode ?? '');
     const [num, setNum] = useState(() => {
         const n = getStudent()?.number;
@@ -63,8 +63,16 @@ function JoinForm({ config, onDone, onSkip, onClose }) {
     const [done, setDone] = useState(null);
     // 入れまちがいを減らすため、送る前に1回「これで いい？」と聞く
     const [confirming, setConfirming] = useState(false);
+    const [demo, setDemo] = useState(null);
+    const [demoCode, setDemoCode] = useState('');
     const submit = async (e) => {
         e.preventDefault();
+        // デモモードの合いことば（0000・0）なら、名乗らずに先生のパスワードを聞く
+        if (onDemo && code.trim() === DEMO_JOIN.code && Number(num) === DEMO_JOIN.number) {
+            setError(null);
+            setDemo('ask');
+            return;
+        }
         if (!confirming) {
             setError(null);
             setConfirming(true);
@@ -89,10 +97,26 @@ function JoinForm({ config, onDone, onSkip, onClose }) {
     if (done) {
         return (_jsxs("div", { children: [_jsxs("h2", { style: S.h, children: ["\u3042\u308A\u304C\u3068\u3046\u3001", done.student.number, "\u3070\u3093\u3055\u3093"] }), _jsxs("p", { style: S.p, children: ["\u3053\u308C\u304B\u3089\u306E \u304D\u308D\u304F\u304C \u305B\u3093\u305B\u3044\u306B \u3068\u3069\u304F\u3088\u3002", done.claimed > 0 && _jsxs(_Fragment, { children: ["\u3044\u307E\u307E\u3067\u306E ", _jsx("b", { children: done.claimed }), " \u3051\u3093\u3082 \u3044\u3063\u3057\u3087\u306B \u3068\u3069\u3044\u305F\u3088\u3002"] })] }), _jsx("button", { type: "button", style: S.primary, onClick: () => onClose?.(), children: "\u3068\u3058\u308B" })] }));
     }
+    if (demo === 'ask' && onDemo) {
+        const go = async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError(null);
+            const r = await verifyDemoCode(config, demoCode);
+            setBusy(false);
+            if (r.ok)
+                onDemo();
+            else {
+                setError(r.message);
+                setDemoCode('');
+            }
+        };
+        return (_jsxs("form", { onSubmit: go, children: [_jsx("h2", { style: S.h, children: "\u30C7\u30E2\u30E2\u30FC\u30C9" }), _jsx("p", { style: S.p, children: "\u30A2\u30D7\u30EA\u306E \u3057\u3087\u3046\u304B\u3044\u7528\u3002\u3059\u3079\u3066\u306E\u753A\u304C \u3072\u3089\u304D\u3001\u304D\u308D\u304F\u306F \u3069\u3053\u306B\u3082 \u304A\u304F\u3089\u308C\u306A\u3044\u3088\u3002\u305B\u3093\u305B\u3044\u306E \u30D1\u30B9\u30EF\u30FC\u30C9\u3092 \u5165\u308C\u3066\u306D\u3002" }), _jsx("input", { style: { ...S.input, letterSpacing: '0.3em', marginBottom: 14 }, value: demoCode, required: true, autoFocus: true, type: "password", inputMode: "numeric", autoComplete: "off", "aria-label": "\u30D1\u30B9\u30EF\u30FC\u30C9", onChange: (e) => setDemoCode(e.target.value.replace(/[^0-9]/g, '')) }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy || !demoCode, children: busy ? 'たしかめているよ…' : 'デモを はじめる' }), _jsx("button", { type: "button", style: S.ghost, onClick: () => { setDemo(null); setError(null); }, children: "\u3082\u3069\u308B" }), error && _jsx("p", { style: S.err, children: error })] }));
+    }
     if (confirming) {
         return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3053\u308C\u3067 \u3044\u3044\uFF1F" }), _jsxs("p", { style: { ...S.p, fontSize: 15, color: '#0f2540' }, children: ["\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9 ", _jsx("b", { children: code.trim() }), " \u306E ", _jsx("b", { style: { fontSize: 20 }, children: num }), " \u3070\u3093"] }), _jsx("p", { style: S.note, children: "\u307E\u3061\u304C\u3048\u308B\u3068\u3001\u307B\u304B\u306E\u4EBA\u306E \u304D\u308D\u304F\u306B \u306A\u3063\u3066\u3057\u307E\u3046\u3088\u3002\u3042\u3068\u304B\u3089 \u304B\u3048\u308B\u306B\u306F \u305B\u3093\u305B\u3044\u306E \u30D1\u30B9\u30EF\u30FC\u30C9\u304C \u3044\u308B\u3088\u3002" }), _jsx("button", { type: "submit", style: S.primary, children: "\u306F\u3044\u3001\u306F\u3058\u3081\u308B" }), _jsx("button", { type: "button", style: S.ghost, onClick: () => setConfirming(false), children: "\u306A\u304A\u3059" })] }));
     }
-    return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3058\u3076\u3093\u306E\u3053\u3068\u3092 \u304A\u3057\u3048\u3066\u306D" }), _jsx("p", { style: S.p, children: "\u306A\u307E\u3048\u306F \u304D\u304B\u306A\u3044\u3088\u3002\u300C\u3069\u306E\u5B66\u7D1A\u306E \u306A\u3093\u3070\u3093\u306E\u4EBA\u304B\u300D\u3060\u3051\u304C \u304D\u308D\u304F\u3055\u308C\u308B\u3088\u3002" }), _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-code", children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9" }), _jsx("input", { id: "lak-join-code", style: S.input, value: code, required: true, onChange: (e) => setCode(e.target.value), placeholder: "\u305B\u3093\u305B\u3044\u304B\u3089 \u304D\u3044\u3066\u306D" })] }), _jsxs("div", { style: { marginBottom: 16 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-num", children: "\u3057\u3085\u3063\u305B\u304D\u756A\u53F7" }), _jsx("input", { id: "lak-join-num", style: S.input, value: num, required: true, type: "number", inputMode: "numeric", min: 1, max: 100, onChange: (e) => setNum(e.target.value), placeholder: "12" })] }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy, children: busy ? 'おくっているよ…' : 'はじめる' }), onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onSkip, children: "\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u305A\u306B \u3064\u304B\u3046" })), onClose && !onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onClose, children: "\u3084\u3081\u308B" })), error && _jsx("p", { style: S.err, children: error }), _jsx("p", { style: S.note, children: "\u30B3\u30FC\u30C9\u304C \u306A\u304F\u3066\u3082 \u305C\u3093\u3076 \u3064\u304B\u3048\u308B\u3088\u3002\u3042\u3068\u304B\u3089 \u300C\u305B\u3063\u3066\u3044\u300D\u3067 \u5165\u308C\u308B\u3053\u3068\u3082 \u3067\u304D\u308B\u3088\u3002" })] }));
+    return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3058\u3076\u3093\u306E\u3053\u3068\u3092 \u304A\u3057\u3048\u3066\u306D" }), _jsx("p", { style: S.p, children: "\u306A\u307E\u3048\u306F \u304D\u304B\u306A\u3044\u3088\u3002\u300C\u3069\u306E\u5B66\u7D1A\u306E \u306A\u3093\u3070\u3093\u306E\u4EBA\u304B\u300D\u3060\u3051\u304C \u304D\u308D\u304F\u3055\u308C\u308B\u3088\u3002" }), _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-code", children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9" }), _jsx("input", { id: "lak-join-code", style: S.input, value: code, required: true, onChange: (e) => setCode(e.target.value), placeholder: "\u305B\u3093\u305B\u3044\u304B\u3089 \u304D\u3044\u3066\u306D" })] }), _jsxs("div", { style: { marginBottom: 16 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-num", children: "\u3057\u3085\u3063\u305B\u304D\u756A\u53F7" }), _jsx("input", { id: "lak-join-num", style: S.input, value: num, required: true, type: "number", inputMode: "numeric", min: onDemo ? 0 : 1, max: 100, onChange: (e) => setNum(e.target.value), placeholder: "12" })] }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy, children: busy ? 'おくっているよ…' : 'はじめる' }), onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onSkip, children: "\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u305A\u306B \u3064\u304B\u3046" })), onClose && !onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onClose, children: "\u3084\u3081\u308B" })), error && _jsx("p", { style: S.err, children: error }), _jsx("p", { style: S.note, children: "\u30B3\u30FC\u30C9\u304C \u306A\u304F\u3066\u3082 \u305C\u3093\u3076 \u3064\u304B\u3048\u308B\u3088\u3002\u3042\u3068\u304B\u3089 \u300C\u305B\u3063\u3066\u3044\u300D\u3067 \u5165\u308C\u308B\u3053\u3068\u3082 \u3067\u304D\u308B\u3088\u3002" })] }));
 }
 /**
  * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
@@ -165,7 +189,7 @@ export function JoinGate({ config, chip = 'bottom-right' }) {
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。
  * 「コードを入れずに つかう」を選んだ子の、あとからの入口になる。
  */
-export function JoinSettingsRow({ config }) {
+export function JoinSettingsRow({ config, onDemo }) {
     const [student, setStudent] = useState(() => getStudent());
     const [open, setOpen] = useState(false);
     // 名乗った子が変えるときは、先に先生のパスワード（なりすまし・ぬけて戻る のいたずらを防ぐ）
@@ -194,6 +218,6 @@ export function JoinSettingsRow({ config }) {
                     }
                     else
                         setOpen(true);
-                } })), open && (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onDone: (s) => setStudent(s), onClose: () => setOpen(false) }) }) }))] }));
+                } })), open && (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onDone: (s) => setStudent(s), onClose: () => setOpen(false), onDemo: onDemo ? () => { setOpen(false); onDemo(); } : undefined }) }) }))] }));
 }
 //# sourceMappingURL=JoinGate.js.map

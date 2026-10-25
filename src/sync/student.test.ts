@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  getStudent, clearStudent, resolveStudent, getJoinChoice, chooseAnonymous, claimDevice, verifyUnlock,
+  getStudent, clearStudent, resolveStudent, getJoinChoice, chooseAnonymous, claimDevice, verifyUnlock, verifyDemoCode,
 } from './student.js';
 import { pushSkillState, createPusher } from './push.js';
 import { createSyncedStorage } from './storage.js';
@@ -252,4 +252,15 @@ test('名乗りを変える前の先生のパスワードは、サーバで確�
   assert.deepEqual(await verifyUnlock(CFG, '4-2', '9'), { ok: false, message: 'パスワードが ちがうよ' });
   (globalThis as any).fetch = async () => { throw new Error('offline'); };
   assert.equal((await verifyUnlock(CFG, '4-2', '1234')).ok, false, 'ネットが切れていたら通さない');
+});
+
+test('デモモードの先生のパスワードは、サーバの verify_demo で確かめる', async () => {
+  let sent: any = null;
+  (globalThis as any).fetch = async (u: string, init: any) => {
+    sent = { u, body: JSON.parse(init.body) };
+    return { ok: true, json: async () => (sent.body.p_code === '5678' ? { ok: true } : { ok: false, message: 'パスワードが ちがうよ' }) } as any;
+  };
+  assert.deepEqual(await verifyDemoCode(CFG, '5678'), { ok: true });
+  assert.match(sent.u, /rpc\/verify_demo$/);
+  assert.equal((await verifyDemoCode(CFG, '1')).ok, false);
 });
