@@ -7,6 +7,7 @@ export type { PushRow, PushResult, PushConfig } from './push.js';
 export { getStudent, clearStudent, resolveStudent, verifyUnlock, verifyDemoCode, DEMO_JOIN, subscribeStudent, getJoinChoice, chooseAnonymous, claimDevice, } from './student.js';
 export type { StudentIdentity, ResolveConfig, ResolveResult, JoinChoice, ClaimResult, } from './student.js';
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
+export { fetchClosedApps, checkAppOpen, SOL_URL } from './access.js';
 export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';
 export type { EventRow } from './events.js';
 export { fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween, fetchMySkillTotals, weeklyTrend, weekStart, fetchMyTests, testTrend, testModes, fetchMyTestDetail, } from './pull.js';

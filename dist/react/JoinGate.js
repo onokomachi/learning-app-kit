@@ -17,6 +17,7 @@ import { jsxs as _jsxs, jsx as _jsx, Fragment as _Fragment } from "react/jsx-run
 import { useEffect, useState } from 'react';
 import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock, verifyDemoCode, DEMO_JOIN, } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
+import { AppAccessGate } from './AppAccessGate.js';
 const S = {
     scrim: {
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -181,7 +182,7 @@ export function JoinGate({ config, chip = 'bottom-right' }) {
     }, [config.supabaseUrl, config.supabaseKey]);
     const configured = !!config.supabaseUrl && !!config.supabaseKey;
     if (!open) {
-        return (_jsxs(_Fragment, { children: [_jsx(PlayModeGate, { enabled: configured }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
+        return (_jsxs(_Fragment, { children: [_jsx(PlayModeGate, { enabled: configured }), _jsx(AppAccessGate, { config: config }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
     }
     return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onSkip: fromChip ? undefined : () => { chooseAnonymous(); setOpen(false); }, onClose: () => { setOpen(false); setFromChip(false); } }) }) }));
 }

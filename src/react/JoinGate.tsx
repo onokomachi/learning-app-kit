@@ -19,6 +19,7 @@ import {
   type ResolveConfig, type StudentIdentity,
 } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
+import { AppAccessGate } from './AppAccessGate.js';
 
 const S = {
   scrim: {
@@ -309,6 +310,8 @@ export function JoinGate({ config, chip = 'bottom-right' }: {
     return (
       <>
         <PlayModeGate enabled={configured} />
+        {/* 先生がまだ開いていない単元（PRISM の SOL タブ・学級ごと）は、名乗った子には止める */}
+        <AppAccessGate config={config} />
         {chip && <JoinChip config={config} position={chip} onOpen={() => { setFromChip(true); setOpen(true); }} />}
       </>
     );
