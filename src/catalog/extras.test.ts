@@ -38,6 +38,10 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen',
     'eh-judge', 'eh-slant', 'eh-half', 'eh-trap', 'eh-diag', 'eh-height', 'eh-perim', 'eh-unit',
   ],
+  taiseki: [
+    'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen',
+    'eh-judge', 'eh-add', 'eh-area', 'eh-cube', 'eh-unit', 'eh-mix', 'eh-outer', 'eh-double', 'eh-liter',
+  ],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   kakudaizu: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god',
