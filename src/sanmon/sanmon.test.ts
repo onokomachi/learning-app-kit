@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus } from './index.js';
+import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, modeLockMessage, inSchoolHoursLocal, offlineModes, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus, type SanmonModes, type SanmonModeKey } from './index.js';
 import { CATALOGS } from '../catalog/index.js';
 
 const empty: SanmonStatus = { stamina: 0, earnedToday: 0, apps: {} };
@@ -65,3 +65,36 @@ test('かけら: アプリの単元はテストの日（5日まで）と階段�
   assert.equal(opened.find((u) => u.key === 'div1')!.cap, 40);
   assert.equal(levelCapFor(100), SANMON_GROWTH.maxCap);
 });
+
+
+const sh = { enabled: true, active: true, start: '08:00', end: '15:30', modes: ['adventure', 'speed', 'monster', 'class_duel'] as SanmonModeKey[], base: { speed: false } };
+
+test('平日モード: サーバが閉じたモードは、授業の時間の文を出す。先生が閉じただけのモードは前の文', () => {
+  const modes: SanmonModes = { adventure: false, speed: false, monster: false, class_duel: false, _school_hours: sh };
+  assert.ok(String(modeLockMessage(modes, 'adventure')).includes('15:30から'));
+  assert.equal(modeLockMessage(modes, 'practice'), null);
+  const teacherOnly: SanmonModes = { speed: false, _school_hours: { ...sh, active: false } };
+  assert.equal(modeLockMessage(teacherOnly, 'speed'), '先生が まだ ひらいていないよ');
+  assert.equal(modeLockMessage(teacherOnly, 'adventure'), null);
+});
+
+test('平日モード: 端末の時計の判定は日本時間の 月〜金・開始以上・終了より前', () => {
+  // 2026-10-26 は月曜。UTC 0:00 = 日本時間 9:00
+  assert.equal(inSchoolHoursLocal(sh, new Date('2026-10-26T00:00:00Z')), true);
+  assert.equal(inSchoolHoursLocal(sh, new Date('2026-10-26T06:30:00Z')), false); // 15:30 ちょうどは開く
+  assert.equal(inSchoolHoursLocal(sh, new Date('2026-10-25T22:59:00Z')), false); // 7:59
+  assert.equal(inSchoolHoursLocal(sh, new Date('2026-10-25T00:00:00Z')), false); // 日曜
+});
+
+test('平日モード: 通信が切れたときは、前に読めた設定で閉じる（先生の開け閉めは base から）', () => {
+  const cached: SanmonModes = { _school_hours: { ...sh, active: false } };
+  const m = offlineModes(cached, new Date('2026-10-26T01:00:00Z'));
+  assert.equal(isModeOpen(m, 'adventure'), false);
+  assert.equal(isModeOpen(m, 'practice'), true);
+  const after = offlineModes(cached, new Date('2026-10-26T07:00:00Z'));
+  assert.equal(isModeOpen(after, 'adventure'), true);
+  assert.equal(isModeOpen(after, 'speed'), false); // 先生が閉じている
+  const opened = offlineModes({ _school_hours: { ...sh, open_until: '2026-10-26T02:00:00Z' } }, new Date('2026-10-26T01:00:00Z'));
+  assert.equal(isModeOpen(opened, 'adventure'), true); // 「いまだけ開ける」のあいだ
+});
+

@@ -13,7 +13,8 @@
  *     階段  … 実力の階段を、ひとりで 半分の段 まで登る
  *     ねばり … その単元を ひとりで **3日以上** 練習する
  * - アプリが無い単元（大きい数・折れ線グラフと表・角の大きさ）は はじめから開いている。
- * - スタミナは各単元アプリの正解1問で1たまる（1日30まで・ためておけるのは100まで・ペアの時間は半分）。
+ * - スタミナは各単元アプリの正解1問で1たまる（1つの項目で1日5まで・熟達した項目は半分・ためておけるのは100まで・ペアの時間は半分。
+ *   2026-10-25〜 サーバの _sanmon_stamina が決める。dailyCap はもう使っていない）。
  *   SANMON のバトル1回で5使う。SANMON の練習・復習・本番テストはスタミナなしで使える。
  *   計算はサーバ（sanmon_status / sanmon_spend）がする。端末の数字を書きかえても増えない。
  */
@@ -193,15 +194,69 @@ export declare const SANMON_MODES: readonly [{
     readonly desc: "学校のテストの形で";
 }];
 export type SanmonModeKey = (typeof SANMON_MODES)[number]['key'];
+/**
+ * 平日モード（2026-10-26 先生と決めた）。先生が PRISM で学級ごとにオンにすると、
+ * 月〜金（祝日をのぞく）の start〜end は、modes のモード（ゲームの4つから えらぶ）が閉じる。
+ * 判定はサーバの時計（日本時間。サーバの _sanmon_effective_modes）でする。iPad の時計を変えても抜けられない。
+ * サーバは閉じたモードを false にして返すので、isModeOpen だけで効く（古いアプリでも効く）。
+ */
+export interface SanmonSchoolHours {
+    enabled: boolean;
+    /** いま閉じているか */
+    active: boolean;
+    /** 'HH:MM'（日本時間） */
+    start: string;
+    end: string;
+    modes: SanmonModeKey[];
+    /** 先生が「いまだけ開ける」を押したとき、その時刻まで開いている */
+    open_until?: string | null;
+    /** 先生の開け閉め（平日モードを入れる前）。通信が切れたときの判定に使う */
+    base?: Partial<Record<SanmonModeKey, boolean>>;
+}
+/** 平日モードで閉じられるモード（ゲームだけ。練習・復習・本番テストは学習なので閉じない） */
+export declare const SCHOOL_HOURS_MODES: readonly ["adventure", "speed", "monster", "class_duel"];
+/** 平日モードの はじめの値 */
+export declare const SCHOOL_HOURS_DEFAULT: {
+    start: string;
+    end: string;
+    modes: SanmonModeKey[];
+};
 /** 書いていないモードは開いている（false のときだけ閉じる） */
-export type SanmonModes = Partial<Record<SanmonModeKey, boolean>>;
+export type SanmonModes = Partial<Record<SanmonModeKey, boolean>> & {
+    _school_hours?: SanmonSchoolHours;
+};
 export declare function isModeOpen(modes: SanmonModes | null | undefined, key: SanmonModeKey): boolean;
-/** 自分の学級のモードの開け閉めを読む（読めないときは すべて開いている扱い） */
+/** そのモードが平日モード（授業の時間）で閉じているか */
+export declare function isSchoolHoursLocked(modes: SanmonModes | null | undefined, key: SanmonModeKey): boolean;
+/**
+ * 閉じているモードを押したときに子どもに出す文。開いていれば null。
+ * 授業の時間で閉じているときは「いつ開くか」と「いまできること」を出す（ただ閉じるより、こわれたと思われない）。
+ */
+export declare function modeLockMessage(modes: SanmonModes | null | undefined, key: SanmonModeKey): string | null;
+/** 平日モードの時間か（端末の時計。通信が切れたときだけ使う。祝日は分からないので 月〜金 で見る） */
+export declare function inSchoolHoursLocal(sh: Pick<SanmonSchoolHours, 'start' | 'end'>, now?: Date): boolean;
+/** 通信が切れたとき：前に読めた平日モードの設定から、いまの開け閉めを作る */
+export declare function offlineModes(cached: SanmonModes, now?: Date): SanmonModes;
+/**
+ * 自分の学級のモードの開け閉めを読む。
+ * 読めたら端末に覚えておく。読めないときは、前に読めた設定で平日モードだけは効かせる（通信を切って抜けられないように）。
+ * 一度も読めていなければ すべて開いている扱い（ok: false）。
+ */
 export declare function fetchSanmonModes(config: ResolveConfig, studentId: string): Promise<{
     ok: false;
     message: string;
 } | {
     ok: true;
-    modes: Partial<Record<"adventure" | "speed" | "monster" | "class_duel" | "practice" | "review" | "mock_test", boolean>>;
+    modes: SanmonModes;
+    offline?: undefined;
+} | {
+    ok: true;
+    modes: SanmonModes;
+    offline: true;
 }>;
+/**
+ * 平日モードで閉じているモードを押したことをサーバに残す（先生の PRISM に「押した回数」として出る。ばつではなく声かけのため）。
+ * サーバは、本当に平日モードで閉じているときだけ・同じモードは3分に1回だけ残す。失敗しても何もしない。
+ */
+export declare function reportLockHit(config: ResolveConfig, studentId: string, key: SanmonModeKey): Promise<void>;
 //# sourceMappingURL=index.d.ts.map
