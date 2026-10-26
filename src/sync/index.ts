@@ -12,6 +12,7 @@ export type {
   StudentIdentity, ResolveConfig, ResolveResult, JoinChoice, ClaimResult,
 } from './student.js';
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
+export { fetchClosedApps, checkAppOpen, SOL_URL } from './access.js';
 export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';
 export type { EventRow } from './events.js';
 export {

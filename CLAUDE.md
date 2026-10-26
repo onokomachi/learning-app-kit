@@ -15,6 +15,9 @@
 各アプリの CI が週1回 `learning-app-kit-platform update` で kit を最新に上げ、`npm run check` が通れば main に自動で反映する（通らなければ反映せずメール）。
 `templates/workflows/check.yml` も共通ファイルとして全アプリに配られる（`fix` で入る）。
 
+**単元の開け閉め（2026-10-26〜）**: 先生が PRISM の SOL タブで学級ごとに開く。`JoinGate` の中の `AppAccessGate` が、名乗った子の学級で閉じているアプリを止める（サーバの `app_open_for`、アプリは `apps.url` の origin で見分ける）。
+**新しく `apps` に足した単元は閉じて始まる**（`apps.default_open` の既定は false）。全学級で開いて始めたいときだけ `default_open = true` にする。
+
 <!-- platform:begin（learning-app-kit が配る。手で書きかえない。直すときは kit の platform/CLAUDE.common.md） -->
 ## 学級ポータル共通のルール（learning-app-kit が配る。ここは手で書きかえない）
 

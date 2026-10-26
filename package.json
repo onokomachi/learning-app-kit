@@ -1,6 +1,6 @@
 {
   "name": "learning-app-kit",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "description": "単元学習アプリの共通基盤: 間隔反復スケジューラ / 問題ジェネレーターの汎用検証ヘルパー / CIテンプレート",
   "type": "module",
   "license": "MIT",
@@ -55,7 +55,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts src/sync/storage.test.ts src/sync/push.test.ts src/sync/student.test.ts src/sync/events.test.ts src/sync/playMode.test.ts src/trial/trial.test.ts src/sync/handoff.test.ts src/sync/pull.test.ts src/react/roundRecorder.test.ts src/react/scratchLayout.test.ts src/react/fractionPadLogic.test.ts src/catalog/extras.test.ts src/app/app.test.ts src/app/platform.test.ts src/sanmon/sanmon.test.ts",
+    "test": "tsx --test src/review/scheduler.test.ts src/verify/checks.test.ts src/sync/storage.test.ts src/sync/push.test.ts src/sync/student.test.ts src/sync/events.test.ts src/sync/playMode.test.ts src/trial/trial.test.ts src/sync/handoff.test.ts src/sync/pull.test.ts src/react/roundRecorder.test.ts src/react/scratchLayout.test.ts src/react/fractionPadLogic.test.ts src/catalog/extras.test.ts src/app/app.test.ts src/app/platform.test.ts src/sanmon/sanmon.test.ts src/sync/access.test.ts",
     "check": "npm run build && npm test",
     "prepare": "npm run build"
   },
