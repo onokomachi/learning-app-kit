@@ -56,6 +56,11 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
     'line-read-line-tenths', 'line-read-line-0to10', 'line-read-line-hundredths',
     'wp-+', 'wp--', 'wp-×', 'wp-÷',
   ],
+  // エラーハンターは レベル表の eh-shikumi / eh-mul / eh-div で送る（カタログ本体にある）
+  syousu5: [
+    'mock-test', 'mock-test-mul', 'mock-test-div', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell',
+    'trial-kyokugen', 'trial-mugen',
+  ],
 };
 
 test('アプリが送ってくる記号は、ひとつ残らず意味に戻せる', () => {

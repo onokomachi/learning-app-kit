@@ -204,4 +204,13 @@ export const APP_EXTRA_MODULES: Record<string, ModuleEntry[]> = {
       ],
     },
   ],
+  syousu5: [{
+    // 本番テストが3つある（整数と小数のしくみ＝mock-test、小数のかけ算＝mock-test-mul、小数のわり算＝mock-test-div）
+    module_id: 'mock-test',
+    title: '本番テストモード',
+    skills: [
+      k('mock-test-mul', '本番テスト「小数のかけ算」（1回ぶん）', '表・裏を通してやったテスト1回ぶんの点数', 'test'),
+      k('mock-test-div', '本番テスト「小数のわり算」（1回ぶん）', '表・裏を通してやったテスト1回ぶんの点数', 'test'),
+    ],
+  }],
 };

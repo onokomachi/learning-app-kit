@@ -35,6 +35,7 @@ import { bunsuu4 } from './bunsuu4.js';
 import { menseki4 } from './menseki4.js';
 import { rippoutai } from './rippoutai.js';
 import { sanmon } from './sanmon.js';
+import { syousu5 } from './syousu5.js';
 import { COMMON_EXTRA_MODULES, APP_EXTRA_MODULES } from './extras.js';
 
 export type { AppCatalog, ResolvedSkill, MisconceptionEntry } from './types.js';
@@ -60,7 +61,7 @@ function withExtras(c: AppCatalog): AppCatalog {
 
 /** app_id → カタログ。新しいアプリはここに足す。 */
 export const CATALOGS: Record<string, AppCatalog> = Object.fromEntries(
-  [hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono, menseki, heikin, eigo4, bunsuu4, menseki4, rippoutai, sanmon]
+  [hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, hitosono, menseki, heikin, eigo4, bunsuu4, menseki4, rippoutai, sanmon, syousu5]
     .map(withExtras)
     .map((c) => [c.app_id, c]),
 );
