@@ -87,6 +87,22 @@ export const APP_EXTRA_MODULES: Record<string, ModuleEntry[]> = {
     ],
   }],
 
+  taiseki: [{
+    module_id: 'error-hunter',
+    title: 'エラーハンター',
+    skills: [
+      k('eh-judge', '正しい式を「正しい」と見ぬく', 'まちがっていない体積の式を、まちがい扱いしない', 'choice'),
+      k('eh-add', '3つの長さをたしたまちがい', '縦 ＋ 横 ＋ 高さ を体積にしてしまう', 'mixed'),
+      k('eh-area', '高さをかけわすれたまちがい', '縦 × 横（底の面積）で止めてしまう', 'mixed'),
+      k('eh-cube', '立方体の公式のまちがい', '1辺 × 3・1辺 × 1辺 にしてしまう', 'mixed'),
+      k('eh-unit', '体積の単位のまちがい', '1m³ を 100cm³・10000cm³ と考える（1000000cm³ が正しい）', 'mixed'),
+      k('eh-mix', '単位をそろえずにかけたまちがい', 'm と cm がまざった長さをそのままかける', 'mixed'),
+      k('eh-outer', '容積を外のりで求めたまちがい', '板の厚さを引かずに外のりで容積を出す', 'mixed'),
+      k('eh-double', '組み合わせた立体で重なりを2回数えたまちがい', '分けた直方体に全体の長さをそのまま使う', 'mixed'),
+      k('eh-liter', 'かさの単位のまちがい', '1L を 100cm³ と考える（1000cm³ が正しい）', 'mixed'),
+    ],
+  }],
+
   bai: [EH_JUDGE_FIX],
   gaisu: [EH_JUDGE_FIX],
   suusei: [EH_JUDGE_FIX],

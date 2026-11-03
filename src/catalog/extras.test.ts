@@ -26,6 +26,7 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   'bunsuu-seisuu': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   // エラーハンターの記号（eh-numden など）はカタログの項目にあるので、ここは共通のものだけ
   'bunsuu-tasizan-hikizan': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
+  'bunsuu-kakewari': ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   hitosono: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   heikin: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
   bunsuu4: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen'],
@@ -36,6 +37,10 @@ const RECORDED_EXTRAS: Record<string, string[]> = {
   menseki: [
     'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen',
     'eh-judge', 'eh-slant', 'eh-half', 'eh-trap', 'eh-diag', 'eh-height', 'eh-perim', 'eh-unit',
+  ],
+  taiseki: [
+    'mock-test', 'boss-normal', 'boss-hard', 'boss-god', 'boss-hell', 'trial-kyokugen', 'trial-mugen',
+    'eh-judge', 'eh-add', 'eh-area', 'eh-cube', 'eh-unit', 'eh-mix', 'eh-outer', 'eh-double', 'eh-liter',
   ],
   suihei: ['mock-test', 'boss-normal', 'boss-hard', 'boss-god'],
   kakudaizu: [
