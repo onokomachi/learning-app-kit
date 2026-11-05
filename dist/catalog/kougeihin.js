@@ -4,8 +4,8 @@ export const kougeihin = {
     "subject": "国語",
     "grade": 4,
     "url": "https://syo4-mirainitunagukougeihinn.vercel.app",
-    "generated_at": "2026-11-04",
-    "skill_count": 50,
+    "generated_at": "2026-11-05",
+    "skill_count": 52,
     "modules": [
         {
             "module_id": "scene-1",
@@ -240,6 +240,12 @@ export const kougeihin = {
                     "answer_kind": "choice"
                 },
                 {
+                    "skill_id": "q-52",
+                    "label": "設問52・書かれていること（ぬき出し）",
+                    "desc": "第5だん落で、筆者は、工芸品をのこすために何をしようとしていますか。「〜ようとしています」に続くように、本文から ぬき出しましょう。",
+                    "answer_kind": "extract"
+                },
+                {
                     "skill_id": "q-36",
                     "label": "設問36・だん落の役わり（選択）",
                     "desc": "第6だん落に、木曽漆器の職人に言われた言葉が書かれているのは、なぜだと考えられますか。",
@@ -254,7 +260,13 @@ export const kougeihin = {
                 {
                     "skill_id": "q-38",
                     "label": "設問38・だん落の役わり（選択）",
-                    "desc": "この文章では、筆者の考えがどこに書かれていますか。",
+                    "desc": "「工芸品を未来の日本にのこしたい」という筆者の考えは、どのだん落に書かれていますか。もっともふさわしいものをえらびましょう。",
+                    "answer_kind": "choice"
+                },
+                {
+                    "skill_id": "q-51",
+                    "label": "設問51・だん落の役わり（選択）",
+                    "desc": "第5だん落は、「中」のまとめとして、どんなはたらきをしていますか。もっともふさわしいものをえらびましょう。",
                     "answer_kind": "choice"
                 },
                 {
@@ -358,6 +370,7 @@ export const kougeihin = {
                 "q-36",
                 "q-42",
                 "q-43",
+                "q-51",
                 "q-45",
                 "q-48",
                 "q-50"
@@ -374,7 +387,8 @@ export const kougeihin = {
                 "q-26",
                 "q-29",
                 "q-31",
-                "q-37"
+                "q-37",
+                "q-51"
             ]
         },
         {
