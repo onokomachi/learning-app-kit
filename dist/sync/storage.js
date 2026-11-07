@@ -1,6 +1,7 @@
 import { getDeviceKey } from './device.js';
 import { getStudent, subscribeStudent } from './student.js';
 import { flushEvents, clearSentMark } from './events.js';
+import { isTrial } from './trialMode.js';
 /** 端末内だけで完結する保存。Supabase を設定していないときはこれだけが動く。 */
 export const localAdapter = {
     getItem: (name) => {
@@ -74,6 +75,11 @@ export function createSyncedStorage(config) {
         const state = parseSyncable(raw);
         if (!state)
             return;
+        // 体験中は送らない（出来事は flushEvents の中で「送ったこと」にする）
+        if (isTrial()) {
+            void flushEvents({ appId, supabaseUrl, supabaseKey }, state.logs);
+            return;
+        }
         // 出来事（1問ごとの記録）は到達状況とは別に送る。
         // 片方が失敗しても、もう片方は届く。
         void flushEvents({ appId, supabaseUrl, supabaseKey }, state.logs);

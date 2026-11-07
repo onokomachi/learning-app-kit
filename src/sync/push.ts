@@ -10,6 +10,7 @@
 import type { SyncConfig } from './types.js';
 import { getDeviceKey } from './device.js';
 import { getStudent, subscribeStudent } from './student.js';
+import { isTrial } from './trialMode.js';
 
 /** 送信する1スキルぶん。skill_id はカタログと同じ文字列にする。 */
 export interface PushRow {
@@ -45,6 +46,7 @@ export async function pushSkillState(config: PushConfig, rows: PushRow[]): Promi
     (r) => r.skill_id && r.attempts >= 0 && r.corrects >= 0 && r.corrects <= r.attempts,
   );
   if (valid.length === 0) return { ok: true, pushed: 0 };
+  if (isTrial()) return { ok: true, pushed: 0 };
 
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/sync_skill_state`, {

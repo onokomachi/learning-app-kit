@@ -30,3 +30,10 @@ export {
   pairChecker, subscribePlayMode, PLAY_MODE_WINDOW_MS,
 } from './playMode.js';
 export type { PlayMode } from './playMode.js';
+export { isTrial, endTrial, hashHasTrial } from './trialMode.js';
+export {
+  getPortalConfig, loadPortalConfig, subscribePortalConfig, trialAllows, trialHit, fetchTrialApps, buildTrialUrl, SOL_TRIAL_URL,
+} from './portalConfig.js';
+export type { PortalAppConfig, TrialAppEntry } from './portalConfig.js';
+export { TRIAL_FEATURE_SETS, trialFamilyOf, mathTrialKey } from './trialFeatures.js';
+export type { TrialFamily, TrialFeature } from './trialFeatures.js';

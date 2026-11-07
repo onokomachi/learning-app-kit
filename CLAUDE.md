@@ -18,6 +18,10 @@
 **単元の開け閉め（2026-10-26〜）**: 先生が PRISM の SOL タブで学級ごとに開く。`JoinGate` の中の `AppAccessGate` が、名乗った子の学級で閉じているアプリを止める（サーバの `app_open_for`、アプリは `apps.url` の origin で見分ける）。
 **新しく `apps` に足した単元は閉じて始まる**（`apps.default_open` の既定は false）。全学級で開いて始めたいときだけ `default_open = true` にする。
 
+**体験版とログイン必須（2026-11-07〜）**: SOL の体験の入口（`https://class-portal-kids.vercel.app/#trial`）から開いたタブは、URL の `#trial` で体験中になる（`sync/trialMode.ts`。タブの中だけ覚える）。
+体験中は `getStudent()` が null（名乗っていない扱い）・答えを送らない（`trial_hit` で回数だけ）・使える画面は PRISM の管理タブの設定（`trialAllows`・`TrialLock`。項目の一覧は `sync/trialFeatures.ts`）。
+普通のリンクは、PRISM の「ログイン必須」スイッチ（`portal_settings.require_join`）を入れると JoinGate が名乗るまで閉じられない入力画面を出す（はじめは切）。設定はサーバの `portal_app_config`（origin で見分ける）。
+
 <!-- platform:begin（learning-app-kit が配る。手で書きかえない。直すときは kit の platform/CLAUDE.common.md） -->
 ## 学級ポータル共通のルール（learning-app-kit が配る。ここは手で書きかえない）
 

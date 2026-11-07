@@ -7,4 +7,5 @@ export { PlayModeGate } from './PlayModeGate.js';
 export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';
 export { useAdaptiveLevels } from './useAdaptiveLevels.js';
 export { FractionPad, FractionPadToggle } from './FractionPad.js';
+export { TrialLock, TrialBanner, TrialNotListed, useTrialLocked, useTrialAllows, usePortalConfig } from './TrialGate.js';
 //# sourceMappingURL=index.js.map

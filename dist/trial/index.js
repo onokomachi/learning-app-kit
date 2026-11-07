@@ -30,6 +30,7 @@
  */
 import { getDeviceKey } from '../sync/device.js';
 import { getStudent } from '../sync/student.js';
+import { isTrial } from '../sync/trialMode.js';
 export const QUESTIONS_PER_FLOOR = 2;
 export const MISSES_TO_STOP = 2;
 export const ENDLESS_MISSES = 3;
@@ -298,6 +299,9 @@ function headers(key) {
 export async function flushTrials(config) {
     const { appId, supabaseUrl, supabaseKey } = config;
     if (!supabaseUrl || !supabaseKey)
+        return 0;
+    // 体験中は送らない（実力の階段の記録は端末の中だけ）
+    if (isTrial())
         return 0;
     const all = loadTrials(appId);
     const unsent = all.filter((r) => !r.sent);

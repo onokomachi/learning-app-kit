@@ -18,6 +18,8 @@ import { useEffect, useState } from 'react';
 import { resolveStudent, claimDevice, chooseAnonymous, getStudent, getJoinChoice, clearStudent, subscribeStudent, verifyUnlock, verifyDemoCode, DEMO_JOIN, } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
 import { AppAccessGate } from './AppAccessGate.js';
+import { isTrial, loadPortalConfig, trialHit } from '../sync/index.js';
+import { usePortalConfig, TrialBanner, TrialNotListed } from './TrialGate.js';
 const S = {
     scrim: {
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -53,7 +55,7 @@ const S = {
     note: { marginTop: 14, fontSize: 11, lineHeight: 1.7, color: '#8496ad' },
 };
 /** 入力フォームの中身だけ。ゲートにも設定パネルにも同じものを使う */
-function JoinForm({ config, onDone, onSkip, onClose, onDemo }) {
+function JoinForm({ config, onDone, onSkip, onClose, onDemo, required }) {
     const [code, setCode] = useState(() => getStudent()?.joinCode ?? '');
     const [num, setNum] = useState(() => {
         const n = getStudent()?.number;
@@ -117,7 +119,9 @@ function JoinForm({ config, onDone, onSkip, onClose, onDemo }) {
     if (confirming) {
         return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3053\u308C\u3067 \u3044\u3044\uFF1F" }), _jsxs("p", { style: { ...S.p, fontSize: 15, color: '#0f2540' }, children: ["\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9 ", _jsx("b", { children: code.trim() }), " \u306E ", _jsx("b", { style: { fontSize: 20 }, children: num }), " \u3070\u3093"] }), _jsx("p", { style: S.note, children: "\u307E\u3061\u304C\u3048\u308B\u3068\u3001\u307B\u304B\u306E\u4EBA\u306E \u304D\u308D\u304F\u306B \u306A\u3063\u3066\u3057\u307E\u3046\u3088\u3002\u3042\u3068\u304B\u3089 \u304B\u3048\u308B\u306B\u306F \u305B\u3093\u305B\u3044\u306E \u30D1\u30B9\u30EF\u30FC\u30C9\u304C \u3044\u308B\u3088\u3002" }), _jsx("button", { type: "submit", style: S.primary, children: "\u306F\u3044\u3001\u306F\u3058\u3081\u308B" }), _jsx("button", { type: "button", style: S.ghost, onClick: () => setConfirming(false), children: "\u306A\u304A\u3059" })] }));
     }
-    return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3058\u3076\u3093\u306E\u3053\u3068\u3092 \u304A\u3057\u3048\u3066\u306D" }), _jsx("p", { style: S.p, children: "\u306A\u307E\u3048\u306F \u304D\u304B\u306A\u3044\u3088\u3002\u300C\u3069\u306E\u5B66\u7D1A\u306E \u306A\u3093\u3070\u3093\u306E\u4EBA\u304B\u300D\u3060\u3051\u304C \u304D\u308D\u304F\u3055\u308C\u308B\u3088\u3002" }), _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-code", children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9" }), _jsx("input", { id: "lak-join-code", style: S.input, value: code, required: true, onChange: (e) => setCode(e.target.value), placeholder: "\u305B\u3093\u305B\u3044\u304B\u3089 \u304D\u3044\u3066\u306D" })] }), _jsxs("div", { style: { marginBottom: 16 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-num", children: "\u3057\u3085\u3063\u305B\u304D\u756A\u53F7" }), _jsx("input", { id: "lak-join-num", style: S.input, value: num, required: true, type: "number", inputMode: "numeric", min: onDemo ? 0 : 1, max: 100, onChange: (e) => setNum(e.target.value), placeholder: "12" })] }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy, children: busy ? 'おくっているよ…' : 'はじめる' }), onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onSkip, children: "\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u305A\u306B \u3064\u304B\u3046" })), onClose && !onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onClose, children: "\u3084\u3081\u308B" })), error && _jsx("p", { style: S.err, children: error }), _jsx("p", { style: S.note, children: "\u30B3\u30FC\u30C9\u304C \u306A\u304F\u3066\u3082 \u305C\u3093\u3076 \u3064\u304B\u3048\u308B\u3088\u3002\u3042\u3068\u304B\u3089 \u300C\u305B\u3063\u3066\u3044\u300D\u3067 \u5165\u308C\u308B\u3053\u3068\u3082 \u3067\u304D\u308B\u3088\u3002" })] }));
+    return (_jsxs("form", { onSubmit: submit, children: [_jsx("h2", { style: S.h, children: "\u3058\u3076\u3093\u306E\u3053\u3068\u3092 \u304A\u3057\u3048\u3066\u306D" }), _jsx("p", { style: S.p, children: "\u306A\u307E\u3048\u306F \u304D\u304B\u306A\u3044\u3088\u3002\u300C\u3069\u306E\u5B66\u7D1A\u306E \u306A\u3093\u3070\u3093\u306E\u4EBA\u304B\u300D\u3060\u3051\u304C \u304D\u308D\u304F\u3055\u308C\u308B\u3088\u3002" }), _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-code", children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9" }), _jsx("input", { id: "lak-join-code", style: S.input, value: code, required: true, onChange: (e) => setCode(e.target.value), placeholder: "\u305B\u3093\u305B\u3044\u304B\u3089 \u304D\u3044\u3066\u306D" })] }), _jsxs("div", { style: { marginBottom: 16 }, children: [_jsx("label", { style: S.label, htmlFor: "lak-join-num", children: "\u3057\u3085\u3063\u305B\u304D\u756A\u53F7" }), _jsx("input", { id: "lak-join-num", style: S.input, value: num, required: true, type: "number", inputMode: "numeric", min: onDemo ? 0 : 1, max: 100, onChange: (e) => setNum(e.target.value), placeholder: "12" })] }), _jsx("button", { type: "submit", style: { ...S.primary, opacity: busy ? 0.6 : 1 }, disabled: busy, children: busy ? 'おくっているよ…' : 'はじめる' }), onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onSkip, children: "\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u305A\u306B \u3064\u304B\u3046" })), onClose && !onSkip && (_jsx("button", { type: "button", style: S.ghost, onClick: onClose, children: "\u3084\u3081\u308B" })), error && _jsx("p", { style: S.err, children: error }), _jsx("p", { style: S.note, children: required
+                    ? 'この アプリは がっきゅうコードと しゅっせき番号を 入れて つかうよ。わからないときは せんせいに きいてね。'
+                    : 'コードが なくても ぜんぶ つかえるよ。あとから 「せってい」で 入れることも できるよ。' })] }));
 }
 /**
  * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
@@ -167,13 +171,26 @@ function JoinChip({ config, position, onOpen }) {
             fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
         }, children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u308B" }));
 }
-export function JoinGate({ config, chip = 'bottom-right' }) {
+export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }) {
     const [open, setOpen] = useState(false);
     // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
     const [fromChip, setFromChip] = useState(false);
+    const [student, setStudent] = useState(() => getStudent());
+    const trial = isTrial();
+    const portalCfg = usePortalConfig();
+    useEffect(() => subscribeStudent(setStudent), []);
+    // ログイン必須か・体験の設定を読む。体験中は回数を1回数える（タブごとに1回）
+    useEffect(() => {
+        void loadPortalConfig(config);
+        if (trial)
+            void trialHit(config);
+    }, [config.supabaseUrl, config.supabaseKey]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         // 接続先が無いアプリ（ポータルにつないでいない）では出さない
         if (!config.supabaseUrl || !config.supabaseKey)
+            return;
+        // 体験中は名乗りを聞かない
+        if (isTrial())
             return;
         // ハブから来た子は名乗りが済んでいる。決めていない子にだけ出す
         if (getJoinChoice() !== null || getStudent() !== null)
@@ -181,6 +198,14 @@ export function JoinGate({ config, chip = 'bottom-right' }) {
         setOpen(true);
     }, [config.supabaseUrl, config.supabaseKey]);
     const configured = !!config.supabaseUrl && !!config.supabaseKey;
+    // 体験中（SOL の体験の入口から開いたタブ）：名乗り・単元の鍵・SOLO/DUO は出さない。しるしと「出さない」アプリの画面だけ
+    if (trial) {
+        return (_jsxs(_Fragment, { children: [_jsx(TrialBanner, {}), portalCfg && !portalCfg.trialListed && _jsx(TrialNotListed, {})] }));
+    }
+    // 普通のリンクで学級コードが必須（PRISM の管理タブのスイッチ）：名乗るまで閉じられない入力画面
+    if (configured && portalCfg?.requireJoin && !student && !allowWithout?.()) {
+        return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, required: true, onDemo: onDemo }) }) }));
+    }
     if (!open) {
         return (_jsxs(_Fragment, { children: [_jsx(PlayModeGate, { enabled: configured }), _jsx(AppAccessGate, { config: config }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
     }
@@ -197,6 +222,10 @@ export function JoinSettingsRow({ config, onDemo }) {
     const [unlock, setUnlock] = useState(null);
     if (!config.supabaseUrl || !config.supabaseKey)
         return null;
+    // 体験中は名乗れない（このタブの記録は どこにも送らない）
+    if (isTrial()) {
+        return (_jsx("p", { style: { margin: 0, fontSize: 12, color: '#92400e', fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif' }, children: "\u3044\u307E\u306F \u305F\u3044\u3051\u3093\u3070\u3093\u3002\u304D\u308D\u304F\u306F \u306E\u3053\u3089\u306A\u3044\u3088\u3002" }));
+    }
     return (_jsxs("div", { style: {
             fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
         }, children: [_jsxs("div", { style: {

@@ -12,6 +12,8 @@ export interface JoinFormProps {
      * 名乗りはしない（記録は送られない）。
      */
     onDemo?: () => void;
+    /** 学級コードが必須のとき（PRISM の「ログイン必須」）。「コードがなくても つかえるよ」を出さない */
+    required?: boolean;
 }
 /**
  * 名乗った子が「けす」「入れなおす」をする前に出す、先生のパスワードの入力（ハブでも使う）。
@@ -33,8 +35,15 @@ export declare function UnlockPrompt({ config, student, action, onUnlocked, onCl
  * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
 export type JoinChipPosition = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
-export declare function JoinGate({ config, chip }: {
+export declare function JoinGate({ config, chip, allowWithout, onDemo }: {
     config: ResolveConfig;
+    /**
+     * 学級コードが必須（PRISM の「ログイン必須」）でも、名乗らずに使ってよいときに true を返す。
+     * SANMON のデモモード（先生のパスワードで入る、アプリ紹介用）だけが使う。
+     */
+    allowWithout?: () => boolean;
+    /** 必須の入力画面からデモモードに入る（SANMON だけ。JoinSettingsRow の onDemo と同じ） */
+    onDemo?: () => void;
     /**
      * まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする。
      * 既定は右下: 名乗ったあと同じ場所に SOLO/DUO の切り替え（PlayModeGate）が出るので、
