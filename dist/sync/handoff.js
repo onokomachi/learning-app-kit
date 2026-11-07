@@ -14,6 +14,7 @@
  * ホスティングのアクセスログに出席番号が残らない。
  */
 import { getStudent, resolveStudent } from './student.js';
+import { isTrial } from './trialMode.js';
 function urlEnv() {
     const g = globalThis;
     const loc = g.location;
@@ -44,6 +45,9 @@ export function buildHandoffUrl(appUrl, joinCode, number) {
  * - 受け取ったらURLから消す
  */
 export async function adoptStudentFromUrl(config) {
+    // 体験中は名乗りを受け取らない（#trial はここより先に trialMode が受け取って URL から消している）
+    if (isTrial())
+        return null;
     const url = urlEnv();
     if (!url)
         return getStudent();

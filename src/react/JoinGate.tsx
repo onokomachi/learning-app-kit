@@ -20,6 +20,8 @@ import {
 } from '../sync/index.js';
 import { PlayModeGate } from './PlayModeGate.js';
 import { AppAccessGate } from './AppAccessGate.js';
+import { isTrial, loadPortalConfig, trialHit } from '../sync/index.js';
+import { usePortalConfig, TrialBanner, TrialNotListed } from './TrialGate.js';
 
 const S = {
   scrim: {
@@ -69,10 +71,12 @@ export interface JoinFormProps {
    * 名乗りはしない（記録は送られない）。
    */
   onDemo?: () => void;
+  /** 学級コードが必須のとき（PRISM の「ログイン必須」）。「コードがなくても つかえるよ」を出さない */
+  required?: boolean;
 }
 
 /** 入力フォームの中身だけ。ゲートにも設定パネルにも同じものを使う */
-function JoinForm({ config, onDone, onSkip, onClose, onDemo }: JoinFormProps) {
+function JoinForm({ config, onDone, onSkip, onClose, onDemo, required }: JoinFormProps) {
   const [code, setCode] = useState(() => getStudent()?.joinCode ?? '');
   const [num, setNum] = useState(() => {
     const n = getStudent()?.number;
@@ -191,7 +195,9 @@ function JoinForm({ config, onDone, onSkip, onClose, onDemo }: JoinFormProps) {
       {error && <p style={S.err}>{error}</p>}
 
       <p style={S.note}>
-        コードが なくても ぜんぶ つかえるよ。あとから 「せってい」で 入れることも できるよ。
+        {required
+          ? 'この アプリは がっきゅうコードと しゅっせき番号を 入れて つかうよ。わからないときは せんせいに きいてね。'
+          : 'コードが なくても ぜんぶ つかえるよ。あとから 「せってい」で 入れることも できるよ。'}
       </p>
     </form>
   );
@@ -284,8 +290,15 @@ function JoinChip({ config, position, onOpen }: {
   );
 }
 
-export function JoinGate({ config, chip = 'bottom-right' }: {
+export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }: {
   config: ResolveConfig;
+  /**
+   * 学級コードが必須（PRISM の「ログイン必須」）でも、名乗らずに使ってよいときに true を返す。
+   * SANMON のデモモード（先生のパスワードで入る、アプリ紹介用）だけが使う。
+   */
+  allowWithout?: () => boolean;
+  /** 必須の入力画面からデモモードに入る（SANMON だけ。JoinSettingsRow の onDemo と同じ） */
+  onDemo?: () => void;
   /**
    * まだ名乗っていない端末に出す入口の位置。アプリ側に入口があるときだけ false にする。
    * 既定は右下: 名乗ったあと同じ場所に SOLO/DUO の切り替え（PlayModeGate）が出るので、
@@ -296,16 +309,50 @@ export function JoinGate({ config, chip = 'bottom-right' }: {
   const [open, setOpen] = useState(false);
   // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
   const [fromChip, setFromChip] = useState(false);
+  const [student, setStudent] = useState<StudentIdentity | null>(() => getStudent());
+  const trial = isTrial();
+  const portalCfg = usePortalConfig();
+
+  useEffect(() => subscribeStudent(setStudent), []);
+  // ログイン必須か・体験の設定を読む。体験中は回数を1回数える（タブごとに1回）
+  useEffect(() => {
+    void loadPortalConfig(config);
+    if (trial) void trialHit(config);
+  }, [config.supabaseUrl, config.supabaseKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // 接続先が無いアプリ（ポータルにつないでいない）では出さない
     if (!config.supabaseUrl || !config.supabaseKey) return;
+    // 体験中は名乗りを聞かない
+    if (isTrial()) return;
     // ハブから来た子は名乗りが済んでいる。決めていない子にだけ出す
     if (getJoinChoice() !== null || getStudent() !== null) return;
     setOpen(true);
   }, [config.supabaseUrl, config.supabaseKey]);
 
   const configured = !!config.supabaseUrl && !!config.supabaseKey;
+
+  // 体験中（SOL の体験の入口から開いたタブ）：名乗り・単元の鍵・SOLO/DUO は出さない。しるしと「出さない」アプリの画面だけ
+  if (trial) {
+    return (
+      <>
+        <TrialBanner />
+        {portalCfg && !portalCfg.trialListed && <TrialNotListed />}
+      </>
+    );
+  }
+
+  // 普通のリンクで学級コードが必須（PRISM の管理タブのスイッチ）：名乗るまで閉じられない入力画面
+  if (configured && portalCfg?.requireJoin && !student && !allowWithout?.()) {
+    return (
+      <div style={S.scrim} role="dialog" aria-label="がっきゅうコードの入力">
+        <div style={S.card}>
+          <JoinForm config={config} required onDemo={onDemo} />
+        </div>
+      </div>
+    );
+  }
+
   if (!open) {
     return (
       <>
@@ -338,6 +385,14 @@ export function JoinSettingsRow({ config, onDemo }: { config: ResolveConfig; onD
   const [unlock, setUnlock] = useState<'rejoin' | 'clear' | null>(null);
 
   if (!config.supabaseUrl || !config.supabaseKey) return null;
+  // 体験中は名乗れない（このタブの記録は どこにも送らない）
+  if (isTrial()) {
+    return (
+      <p style={{ margin: 0, fontSize: 12, color: '#92400e', fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif' }}>
+        いまは たいけんばん。きろくは のこらないよ。
+      </p>
+    );
+  }
 
   return (
     <div style={{

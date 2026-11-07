@@ -17,6 +17,7 @@ import { getDeviceKey } from './device.js';
 import { getStudent } from './student.js';
 import { pairChecker } from './playMode.js';
 import type { PushConfig, PushResult } from './push.js';
+import { isTrial } from './trialMode.js';
 
 /** サーバへ送る1件。skill_id はカタログと同じ文字列にする。 */
 export interface EventRow {
@@ -117,6 +118,8 @@ export async function pushEvents(config: PushConfig, rows: EventRow[]): Promise<
   const { appId, supabaseUrl, supabaseKey } = config;
   if (!supabaseUrl || !supabaseKey) return { ok: true, pushed: 0 };
   if (rows.length === 0) return { ok: true, pushed: 0 };
+  // 体験中は答えを送らない（回数だけ trialHit で数える）
+  if (isTrial()) return { ok: true, pushed: 0 };
 
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/sync_events`, {
@@ -147,6 +150,8 @@ export async function pushEvents(config: PushConfig, rows: EventRow[]): Promise<
 export async function flushEvents(config: PushConfig, logs: readonly LogLike[] | undefined): Promise<PushResult> {
   const rows = toEventRows(logs, getSentMark(config.appId));
   if (rows.length === 0) return { ok: true, pushed: 0 };
+  // 体験中の記録は「送ったこと」にして進める。あとでこの端末で名乗っても、体験の分はだれかの記録にならない
+  if (isTrial()) { setSentMark(config.appId, rows[rows.length - 1]!.ts); return { ok: true, pushed: 0 }; }
   const r = await pushEvents(config, rows);
   if (r.ok) setSentMark(config.appId, rows[rows.length - 1]!.ts);
   return r;

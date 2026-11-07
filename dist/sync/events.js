@@ -1,6 +1,7 @@
 import { getDeviceKey } from './device.js';
 import { getStudent } from './student.js';
 import { pairChecker } from './playMode.js';
+import { isTrial } from './trialMode.js';
 /** サーバ側の受け入れ上限と合わせる */
 const MAX_EVENTS = 500;
 const markKey = (appId) => `lak_sent_ts_${appId}`;
@@ -81,6 +82,9 @@ export async function pushEvents(config, rows) {
         return { ok: true, pushed: 0 };
     if (rows.length === 0)
         return { ok: true, pushed: 0 };
+    // 体験中は答えを送らない（回数だけ trialHit で数える）
+    if (isTrial())
+        return { ok: true, pushed: 0 };
     try {
         const res = await fetch(`${supabaseUrl}/rest/v1/rpc/sync_events`, {
             method: 'POST',
@@ -112,6 +116,11 @@ export async function flushEvents(config, logs) {
     const rows = toEventRows(logs, getSentMark(config.appId));
     if (rows.length === 0)
         return { ok: true, pushed: 0 };
+    // 体験中の記録は「送ったこと」にして進める。あとでこの端末で名乗っても、体験の分はだれかの記録にならない
+    if (isTrial()) {
+        setSentMark(config.appId, rows[rows.length - 1].ts);
+        return { ok: true, pushed: 0 };
+    }
     const r = await pushEvents(config, rows);
     if (r.ok)
         setSentMark(config.appId, rows[rows.length - 1].ts);

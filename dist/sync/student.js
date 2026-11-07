@@ -11,6 +11,7 @@
  * 先生が名簿と突き合わせること。
  */
 import { getDeviceKey } from './device.js';
+import { isTrial } from './trialMode.js';
 const KEY = 'lak_student_v1';
 /**
  * 「名乗るか、名乗らずに使うか」をもう決めたか。
@@ -69,6 +70,9 @@ function notifyStudent(s) {
 }
 /** 覚えている児童情報。まだ入力していなければ null。 */
 export function getStudent() {
+    // 体験中（SOL の体験の入口から開いたタブ）は、名乗っていない扱い。学級の記録・セーブにさわらない
+    if (isTrial())
+        return null;
     try {
         const raw = localStorage.getItem(KEY);
         if (!raw)

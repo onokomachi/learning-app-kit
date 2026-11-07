@@ -17,6 +17,7 @@ import type { MascotExpression } from './Mascot';
 import { syncToPortal } from './lib/portal';
 import { noteCorrect, noteWrong, flushAbandoned, getHistory } from './lib/history';
 import { forceSolo } from 'learning-app-kit/sync';
+import { TrialLock, useTrialAllows } from 'learning-app-kit/react';
 import { MarkStrip, type Mark } from './marks';
 
 type Screen = 'title' | 'onboarding' | 'learn';
@@ -167,6 +168,10 @@ export default function App() {
   // ── Learning state ──────────────────────────────────────────────────────────
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('read');
+  // 体験版（SOL の体験の入口から開いたとき）で、PRISM が閉じた項目。体験中でなければ いつも使える
+  const trialAllows = useTrialAllows();
+  const TRIAL_KEY: Record<Mode, string> = { read: 'read', quiz: 'quiz', kanji: 'kanji', structure: 'structure', contrast: 'structure' };
+  const TRIAL_LABEL: Record<string, string> = { read: '読む', quiz: '問題', kanji: '漢字', structure: UNIT.sceneWord };
   const [selectedKanji, setSelectedKanji] = useState<Kanji | null>(null);
 
   const [customSelection, setCustomSelection] = useState<[number, number] | null>(null);
@@ -1018,6 +1023,11 @@ export default function App() {
 
         {/* Left: Text Viewer */}
         <div className="w-3/5 bg-white m-2 rounded-2xl shadow-sm border border-stone-200 flex flex-col relative">
+          {!trialAllows('read') && (
+            <div className="absolute inset-0 z-30 rounded-2xl bg-white flex items-center justify-center p-6 text-center text-stone-500 font-bold">
+              🔒 本文は たいけんばんでは みられないよ
+            </div>
+          )}
           <div className="absolute top-2 left-3 text-stone-400 font-medium text-sm z-10">
             {displayPage.pageNumber}
           </div>
@@ -1057,6 +1067,18 @@ export default function App() {
 
         {/* Right: Action Panel */}
         <div className="w-2/5 m-2 ml-0 flex flex-col gap-2 relative">
+          {!trialAllows(reviewMode ? 'quiz' : TRIAL_KEY[mode]) && (
+            <div className="absolute inset-0 z-30 rounded-2xl overflow-hidden">
+              <TrialLock
+                label={TRIAL_LABEL[reviewMode ? 'quiz' : TRIAL_KEY[mode]]}
+                onBack={() => {
+                  setReviewMode(false);
+                  const next = (['kanji', 'structure', 'read', 'quiz'] as Mode[]).find((m) => trialAllows(TRIAL_KEY[m]));
+                  if (next) setMode(next);
+                }}
+              />
+            </div>
+          )}
           {/* Floating mascot — overlays panel content; bubble appears above to avoid pane-edge clipping */}
           <div className="absolute bottom-2 right-2 z-20 pointer-events-none">
             <div className="relative">

@@ -1,5 +1,6 @@
 import { getDeviceKey } from './device.js';
 import { getStudent, subscribeStudent } from './student.js';
+import { isTrial } from './trialMode.js';
 /**
  * 学習記録を学級ポータルへ送る。
  * supabaseUrl / supabaseKey が無ければ何もしない（設定し忘れても壊れない）。
@@ -13,6 +14,8 @@ export async function pushSkillState(config, rows) {
     // 壊れた行はここで落とす。1件の不正で全体を失敗させない
     const valid = rows.filter((r) => r.skill_id && r.attempts >= 0 && r.corrects >= 0 && r.corrects <= r.attempts);
     if (valid.length === 0)
+        return { ok: true, pushed: 0 };
+    if (isTrial())
         return { ok: true, pushed: 0 };
     try {
         const res = await fetch(`${supabaseUrl}/rest/v1/rpc/sync_skill_state`, {

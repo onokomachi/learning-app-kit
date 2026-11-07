@@ -13,4 +13,5 @@ export { useAdaptiveLevels } from './useAdaptiveLevels.js';
 export type { Adaptive } from './useAdaptiveLevels.js';
 export { FractionPad, FractionPadToggle } from './FractionPad.js';
 export type { FractionPadProps, FractionTool } from './FractionPad.js';
+export { TrialLock, TrialBanner, TrialNotListed, useTrialLocked, useTrialAllows, usePortalConfig } from './TrialGate.js';
 //# sourceMappingURL=index.d.ts.map
