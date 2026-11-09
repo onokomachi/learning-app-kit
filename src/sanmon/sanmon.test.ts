@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, modeLockMessage, inSchoolHoursLocal, offlineModes, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus, type SanmonModes, type SanmonModeKey } from './index.js';
+import { staminaForTown, sanmonTownKeyOf, sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, modeLockMessage, inSchoolHoursLocal, offlineModes, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus, type SanmonModes, type SanmonModeKey } from './index.js';
 import { CATALOGS } from '../catalog/index.js';
 
 const empty: SanmonStatus = { stamina: 0, earnedToday: 0, apps: {} };
@@ -98,3 +98,13 @@ test('平日モード: 通信が切れたときは、前に読めた設定で閉
   assert.equal(isModeOpen(opened, 'adventure'), true); // 「いまだけ開ける」のあいだ
 });
 
+
+test('町のスタミナ：その町で使える分は 町＋共通。アプリの無い町は共通だけ', () => {
+  const st = { stamina: 10, towns: { rounding: 23 } };
+  assert.deepEqual(staminaForTown(st, 'rounding'), { town: 23, common: 10, total: 33 });
+  assert.deepEqual(staminaForTown(st, 'angle'), { town: 0, common: 10, total: 10 });
+  assert.deepEqual(staminaForTown({ stamina: 4 }, null), { town: 0, common: 4, total: 4 });
+  assert.equal(sanmonTownKeyOf('がい数'), 'rounding');
+  assert.equal(sanmonTownKeyOf('わり算の筆算(÷2けた)'), 'div2');
+  assert.equal(sanmonTownKeyOf('ないもの'), null);
+});
