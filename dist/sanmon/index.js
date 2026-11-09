@@ -28,7 +28,10 @@ export const SANMON_RULES = {
     soloDays: 3,
     battleCost: 5,
     dailyCap: 30,
+    /** 共通スタミナ（がんばりボーナス・2026-11-09 より前の分）の上限 */
     maxStamina: 100,
+    /** 町のスタミナ（その単元アプリの正解でたまる。その町のぼうけんでだけ使える。2026-11-09〜）の上限 */
+    townCap: 50,
 };
 /** SANMON の町（はじめ14、2026-10 に 垂直・平行と四角形 を足して15）。並びは SANMON の学習順（MATH_CATEGORIES）と同じ */
 export const SANMON_UNITS = [
@@ -158,11 +161,22 @@ export async function fetchSanmonStatus(config, studentId) {
     if (!r.ok)
         return r;
     const d = r.data;
-    return { ok: true, status: { stamina: d.stamina ?? 0, earnedToday: d.earned_today ?? 0, apps: d.apps ?? {} } };
+    return { ok: true, status: { stamina: d.stamina ?? 0, earnedToday: d.earned_today ?? 0, apps: d.apps ?? {}, towns: d.towns ?? {} } };
+}
+/** その町で使えるスタミナ（町＋共通）。町の key は SANMON_UNITS の key。アプリの無い町は共通だけ */
+export function staminaForTown(status, townKey) {
+    const common = status?.stamina ?? 0;
+    const town = townKey ? (status?.towns?.[townKey] ?? 0) : 0;
+    return { town, common, total: town + common };
+}
+/** SANMON の単元名（MATH_CATEGORIES の name）→ 町の key。ぼうけんでスタミナを使うとき reason の「@町」に付ける */
+export function sanmonTownKeyOf(unitName) {
+    return SANMON_UNITS.find((u) => u.name === unitName)?.key ?? null;
 }
 /**
  * スタミナを使う。足りなければ ok=false（使わない）。
  * eventId はバトルごとに1つ。同じ eventId で送り直しても二重に減らない。
+ * ぼうけんの町のバトルは reason の後ろに「@町の key」を付ける（例 'wild@div1'）。サーバが 町 → 共通 の順に使う。@ が無いと共通だけ。
  */
 export async function spendStamina(config, studentId, eventId, amount = SANMON_RULES.battleCost, reason = '') {
     const r = await rpc(config, 'sanmon_spend', { p_student_id: studentId, p_event_id: eventId, p_amount: amount, p_reason: reason });
