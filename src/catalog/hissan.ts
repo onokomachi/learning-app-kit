@@ -12,7 +12,7 @@ export const hissan: AppCatalog = {
   "grade": 4,
   "url": "https://wari-hissann3.vercel.app",
   "generated_at": "2026-09-15",
-  "skill_count": 27,
+  "skill_count": 32,
   "modules": [
     {
       "module_id": "check",
@@ -76,6 +76,42 @@ export const hissan: AppCatalog = {
           "skill_id": "est-cond",
           "label": "□に入る数字は？",
           "desc": "62)6□9 の商が 10より小さくなる □は？",
+          "answer_kind": "?"
+        }
+      ]
+    },
+    {
+      "module_id": "hissan",
+      "title": "筆算シミュレーター",
+      "skills": [
+        {
+          "skill_id": "hissan-2-1",
+          "label": "2けた ÷ 1けた",
+          "desc": "まずはここから！基本の筆算",
+          "answer_kind": "?"
+        },
+        {
+          "skill_id": "hissan-3-1",
+          "label": "3けた ÷ 1けた",
+          "desc": "少し長くなる筆算を ていねいに",
+          "answer_kind": "?"
+        },
+        {
+          "skill_id": "hissan-2-2",
+          "label": "2けた ÷ 2けた",
+          "desc": "「たてる」数の見当をつける",
+          "answer_kind": "?"
+        },
+        {
+          "skill_id": "hissan-3-2",
+          "label": "3けた ÷ 2けた",
+          "desc": "仮の商を直しながら すすめる",
+          "answer_kind": "?"
+        },
+        {
+          "skill_id": "hissan-3-3",
+          "label": "3けた ÷ 3けた",
+          "desc": "大きなわる数も 見当づけで",
           "answer_kind": "?"
         }
       ]
