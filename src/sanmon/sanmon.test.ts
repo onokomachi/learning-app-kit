@@ -35,6 +35,15 @@ test('小数の2つの町は、テストとモジュールで分けて判定す�
   assert.equal(units.find((u) => u.key === 'decmuldiv')!.open, false, 'かけ算わり算のテストはまだ');
 });
 
+test('わり算の筆算の2つの町は、筆算そのものの項目も練習に数え、同じ条件で開く', () => {
+  const core = ['hissan-2-1', 'hissan-3-1', 'hissan-2-2', 'hissan-3-2', 'hissan-3-3'];
+  const units = sanmonUnits({ ...empty, apps: { hissan: { mastered: core, tests: {}, trial: 0, solo_days: 0 } } });
+  const d1 = units.find((u) => u.key === 'div1')!;
+  const d2 = units.find((u) => u.key === 'div2')!;
+  assert.equal(d1.practice!.have, 5);
+  assert.deepEqual(d1.practice, d2.practice);
+});
+
 test('モードの開け閉め: 書いていないモードは開いている・false だけ閉じる', () => {
   assert.equal(isModeOpen({}, 'speed'), true);
   assert.equal(isModeOpen(null, 'class_duel'), true);
