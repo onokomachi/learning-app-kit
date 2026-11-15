@@ -135,3 +135,40 @@ test('できたときの記録も、手をつけた時点の問題のものに�
   rec.finish('1問目');
   assert.equal(got[0]!.skillId, 's1');
 });
+
+test('まちがいの型と答え: 最初のまちがいだけが記録に残る', () => {
+  const { rec, got } = make();
+  rec.mistake({ type: '切り捨て', answer: 3400 });
+  rec.mistake({ type: '位ちがい', answer: 3000 });   // 2回目は数だけ
+  rec.finish('3456 → 百の位まで');
+  assert.equal(got[0]!.mistakes, 2);
+  assert.equal(got[0]!.missType, '切り捨て');
+  assert.equal(got[0]!.missAnswer, '3400');
+});
+
+test('まちがいの型と答え: 渡さなければ今までどおり（記録に項目が増えない）', () => {
+  const { rec, got } = make();
+  rec.mistake();
+  rec.finish('x');
+  assert.deepEqual(Object.keys(got[0]!).sort(), ['correct', 'label', 'mistakes', 'moduleId', 'skillId']);
+});
+
+test('まちがいの型と答え: とちゅうでやめた記録にも残り、次の問題では消える', () => {
+  const { rec, got } = make();
+  rec.mistake({ type: 'ひく' });
+  rec.next();                         // やめて次の問題へ
+  rec.mistake();
+  rec.finish('次の問題');
+  assert.equal(got[0]!.abandoned, true);
+  assert.equal(got[0]!.missType, 'ひく');
+  assert.equal('missAnswer' in got[0]!, false, '答えを渡していなければ付かない');
+  assert.equal('missType' in got[1]!, false, '前の問題の型を持ちこさない');
+});
+
+test('まちがいの型と答え: 最初のまちがいに情報が無ければ、あとの情報は使わない', () => {
+  const { rec, got } = make();
+  rec.mistake();
+  rec.mistake({ type: '切り上げ' });
+  rec.finish('x');
+  assert.equal('missType' in got[0]!, false, '「最初の」まちがいの型ではないので残さない');
+});

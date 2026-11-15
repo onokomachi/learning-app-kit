@@ -28,12 +28,27 @@ export interface EventRow {
     ts: number;
     /** 本番テストのときだけ。点数と大問ごとの正誤 */
     detail?: unknown;
+    /** その問題の最初のまちがいの型（cleanMissType で整えたもの）。まちがいの無い行には付けない */
+    miss_type?: string;
+    /** その問題の最初のまちがいの答え（cleanMissAnswer で整えたもの） */
+    miss_answer?: string;
     /**
      * 1台を2人で使っていた時間の記録か（playMode.ts）。true のときだけ付ける。
      * サーバは学力の集計（正答率）からこれを外し、取り組んだ量には数える。
      */
     pair?: true;
 }
+/**
+ * まちがいの型を送れる形にする。アプリが決める短い名前なので、制御文字を除いて40文字まで。
+ * 空なら undefined（送らない）。サーバも同じ長さで切る。
+ */
+export declare function cleanMissType(v: unknown): string | undefined;
+/**
+ * まちがいの答えを送れる形にする。**数と記号（と「あまり」）だけ**を残し、20文字まで。
+ * 子どもが打った文字をそのまま送ると、氏名などが入るおそれがあるため。全角は半角にそろえる。
+ * 空なら undefined（送らない）。サーバも同じ規則で整える（sync_events）。
+ */
+export declare function cleanMissAnswer(v: unknown): string | undefined;
 /**
  * どこまで送れたか（端末の時刻・ミリ秒）。
  * これ以降の出来事だけを送る。読めなければ0＝全部送る、で安全側に倒す。

@@ -1,5 +1,5 @@
 export { createRoundRecorder } from './roundRecorder.js';
-export type { RoundRecord, RoundRecorderOptions, RoundRecorder } from './roundRecorder.js';
+export type { RoundRecord, RoundRecorderOptions, RoundRecorder, MissInfo } from './roundRecorder.js';
 export { useRoundRecorder } from './useRoundRecorder.js';
 export { JoinGate, JoinSettingsRow, UnlockPrompt } from './JoinGate.js';
 export { AppAccessGate } from './AppAccessGate.js';

@@ -8,7 +8,7 @@ export { getStudent, clearStudent, resolveStudent, verifyUnlock, verifyDemoCode,
 export type { StudentIdentity, ResolveConfig, ResolveResult, JoinChoice, ClaimResult, } from './student.js';
 export { buildHandoffUrl, adoptStudentFromUrl } from './handoff.js';
 export { fetchClosedApps, checkAppOpen, SOL_URL } from './access.js';
-export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark } from './events.js';
+export { pushEvents, flushEvents, toEventRows, getSentMark, setSentMark, clearSentMark, cleanMissType, cleanMissAnswer } from './events.js';
 export type { EventRow } from './events.js';
 export { fetchMyProgress, dueFromRows, fetchMyActivity, streakDays, totalsBetween, fetchMySkillTotals, weeklyTrend, weekStart, fetchMyTests, testTrend, testModes, fetchMyTestDetail, } from './pull.js';
 export type { MySkillRow, MyProgressResult, MyActivityRow, MyActivityResult, ActivityTotals, MySkillTotalRow, MySkillTotalsResult, WeekPoint, MyTestRow, MyTestsResult, TestPoint, MyTestStep, } from './pull.js';
