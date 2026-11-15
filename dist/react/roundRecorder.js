@@ -38,6 +38,12 @@ export function createRoundRecorder(getOptions) {
      * やめた記録に次の問題の見出しが入る（テストで実際に踏んだ）。
      */
     let openedLabel = '';
+    /** その問題の最初のまちがいの型と答え（2回目以降のまちがいでは変えない） */
+    let firstMiss = {};
+    const missFields = () => ({
+        ...(firstMiss.missType ? { missType: firstMiss.missType } : {}),
+        ...(firstMiss.missAnswer ? { missAnswer: firstMiss.missAnswer } : {}),
+    });
     const close = () => {
         if (done)
             return;
@@ -52,10 +58,16 @@ export function createRoundRecorder(getOptions) {
             correct: false,
             mistakes,
             abandoned: true,
+            ...missFields(),
         });
     };
     return {
-        mistake: () => {
+        mistake: (info) => {
+            if (mistakes === 0 && info) {
+                const t = typeof info.type === 'string' ? info.type.trim() : '';
+                const a = info.answer === undefined || info.answer === null ? '' : String(info.answer).trim();
+                firstMiss = { ...(t ? { missType: t } : {}), ...(a ? { missAnswer: a } : {}) };
+            }
             if (!touched) {
                 // 手をつけた時点の問題を覚える。ラベルは値にして控える
                 opened = getOptions();
@@ -75,6 +87,7 @@ export function createRoundRecorder(getOptions) {
                 label,
                 correct: mistakes === 0,
                 mistakes,
+                ...missFields(),
                 ...(extra?.detail !== undefined ? { detail: extra.detail } : {}),
             });
         },
@@ -86,6 +99,7 @@ export function createRoundRecorder(getOptions) {
             touched = false;
             opened = null;
             openedLabel = '';
+            firstMiss = {};
         },
         count: () => mistakes,
     };

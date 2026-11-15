@@ -30,8 +30,23 @@ export interface RoundRecord<M extends string = string, D = unknown> {
   mistakes: number;
   /** 正解までたどりつかずに離れたか */
   abandoned?: boolean;
+  /** 最初のまちがいの型（mistake に渡したときだけ） */
+  missType?: string;
+  /** 最初のまちがいの答え（mistake に渡したときだけ。送るときに数と記号だけにする） */
+  missAnswer?: string;
   /** 本番テストの答案など、アプリ固有の追加情報 */
   detail?: D;
+}
+
+/**
+ * まちがえたときに、分かれば渡す情報。どちらも任意（渡さなくても今までどおり動く）。
+ * 記録に残るのは**その問題の最初のまちがい**だけ（2回目以降は数だけ数える）。
+ */
+export interface MissInfo {
+  /** まちがいの型。アプリが決める短い名前（例「切り捨て」「位ちがい」「ひく」）。PRISM が型ごとに数える */
+  type?: string;
+  /** 子どもが出した答え。数と記号だけが送られる */
+  answer?: string | number;
 }
 
 /**
@@ -54,8 +69,8 @@ export interface RoundRecorderOptions<M extends string = string, D = unknown> {
 }
 
 export interface RoundRecorder<D = unknown> {
-  /** まちがえたときに呼ぶ */
-  mistake: () => void;
+  /** まちがえたときに呼ぶ。分かれば型と答えを渡す（最初のまちがいだけが記録に残る） */
+  mistake: (info?: MissInfo) => void;
   /** できたときに呼ぶ。以後は何度呼んでも、離れても、二重に記録されない */
   finish: (label: string, extra?: { detail?: D }) => void;
   /** 画面を離れるときに呼ぶ。できていなければ「とちゅうでやめた」として1件残す */
@@ -94,6 +109,12 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
    * やめた記録に次の問題の見出しが入る（テストで実際に踏んだ）。
    */
   let openedLabel = '';
+  /** その問題の最初のまちがいの型と答え（2回目以降のまちがいでは変えない） */
+  let firstMiss: { missType?: string; missAnswer?: string } = {};
+  const missFields = () => ({
+    ...(firstMiss.missType ? { missType: firstMiss.missType } : {}),
+    ...(firstMiss.missAnswer ? { missAnswer: firstMiss.missAnswer } : {}),
+  });
 
   const close = () => {
     if (done) return;
@@ -107,11 +128,17 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
       correct: false,
       mistakes,
       abandoned: true,
+      ...missFields(),
     });
   };
 
   return {
-    mistake: () => {
+    mistake: (info) => {
+      if (mistakes === 0 && info) {
+        const t = typeof info.type === 'string' ? info.type.trim() : '';
+        const a = info.answer === undefined || info.answer === null ? '' : String(info.answer).trim();
+        firstMiss = { ...(t ? { missType: t } : {}), ...(a ? { missAnswer: a } : {}) };
+      }
       if (!touched) {
         // 手をつけた時点の問題を覚える。ラベルは値にして控える
         opened = getOptions();
@@ -131,6 +158,7 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
         label,
         correct: mistakes === 0,
         mistakes,
+        ...missFields(),
         ...(extra?.detail !== undefined ? { detail: extra.detail } : {}),
       });
     },
@@ -144,6 +172,7 @@ export function createRoundRecorder<M extends string = string, D = unknown>(
       touched = false;
       opened = null;
       openedLabel = '';
+      firstMiss = {};
     },
 
     count: () => mistakes,

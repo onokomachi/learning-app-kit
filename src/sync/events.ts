@@ -33,11 +33,37 @@ export interface EventRow {
   ts: number;
   /** 本番テストのときだけ。点数と大問ごとの正誤 */
   detail?: unknown;
+  /** その問題の最初のまちがいの型（cleanMissType で整えたもの）。まちがいの無い行には付けない */
+  miss_type?: string;
+  /** その問題の最初のまちがいの答え（cleanMissAnswer で整えたもの） */
+  miss_answer?: string;
   /**
    * 1台を2人で使っていた時間の記録か（playMode.ts）。true のときだけ付ける。
    * サーバは学力の集計（正答率）からこれを外し、取り組んだ量には数える。
    */
   pair?: true;
+}
+
+/**
+ * まちがいの型を送れる形にする。アプリが決める短い名前なので、制御文字を除いて40文字まで。
+ * 空なら undefined（送らない）。サーバも同じ長さで切る。
+ */
+export function cleanMissType(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const s = v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40);
+  return s || undefined;
+}
+
+/**
+ * まちがいの答えを送れる形にする。**数と記号（と「あまり」）だけ**を残し、20文字まで。
+ * 子どもが打った文字をそのまま送ると、氏名などが入るおそれがあるため。全角は半角にそろえる。
+ * 空なら undefined（送らない）。サーバも同じ規則で整える（sync_events）。
+ */
+export function cleanMissAnswer(v: unknown): string | undefined {
+  if (typeof v !== 'string' && typeof v !== 'number') return undefined;
+  const s = String(v).normalize('NFKC').replace(/[−–—]/g, '-');
+  const kept = (s.match(/あまり|[0-9.,/+\-×÷=()<> ]/g) ?? []).join('').trim().slice(0, 20).trim();
+  return kept || undefined;
 }
 
 /** サーバ側の受け入れ上限と合わせる */
@@ -101,6 +127,9 @@ export function toEventRows(logs: readonly LogLike[] | undefined, sinceTs: numbe
       abandoned: !!l.abandoned,
       ts: l.ts,
       ...(l.detail ? { detail: l.detail } : {}),
+      // まちがいの型と答え（アプリが渡したときだけ。古いアプリの記録には無い）
+      ...(cleanMissType(l.missType) ? { miss_type: cleanMissType(l.missType) } : {}),
+      ...(cleanMissAnswer(l.missAnswer) ? { miss_answer: cleanMissAnswer(l.missAnswer) } : {}),
       // 本番テスト（detail 付き）は実力を測る場面なので、ペアの時間でも印を付けない
       // （テストに入るときに forceSolo でソロへ切り替える前提）
       ...(!l.detail && isPair(l.ts) ? { pair: true as const } : {}),

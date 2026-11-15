@@ -87,3 +87,29 @@ test('設定が無ければ何もしない（設定し忘れても壊れない�
   assert.deepEqual(r, { ok: true, pushed: 0 });
   assert.equal(called, false);
 });
+
+test('toEventRows: まちがいの型と答えは、渡されたときだけ整えて送る（古いアプリの記録には付かない）', () => {
+  const rows = toEventRows([
+    log({ id: 'old', ts: 1000, correct: false, mistakes: 1 }),
+    log({ id: 'new', ts: 2000, correct: false, mistakes: 2, missType: '  切り捨て ', missAnswer: '３，４００' }),
+  ], 0);
+  assert.equal('miss_type' in rows[0]!, false, '古い記録には miss_type を付けない');
+  assert.equal('miss_answer' in rows[0]!, false);
+  assert.equal(rows[1]!.miss_type, '切り捨て', '前後の空白を除く');
+  assert.equal(rows[1]!.miss_answer, '3,400', '全角は半角にそろえる');
+});
+
+test('cleanMissAnswer: 数と記号（と「あまり」）だけを残し、20文字まで', async () => {
+  const { cleanMissAnswer, cleanMissType } = await import('./events.js');
+  assert.equal(cleanMissAnswer('12あまり3'), '12あまり3');
+  assert.equal(cleanMissAnswer('やまだ たろう 5'), '5', 'ひらがなの名前は落ちる');
+  assert.equal(cleanMissAnswer('Taro 7'), '7', 'ローマ字の名前も落ちる');
+  assert.equal(cleanMissAnswer('山田'), undefined, '数も記号も無ければ送らない');
+  assert.equal(cleanMissAnswer(3400), '3400', '数も受け取る');
+  assert.equal(cleanMissAnswer('1'.repeat(30))!.length, 20);
+  assert.equal(cleanMissAnswer('−５'), '-5', '全角のマイナスもそろえる');
+  assert.equal(cleanMissType('a'.repeat(50))!.length, 40);
+  assert.equal(cleanMissType('\u0007ひく'), 'ひく', '制御文字は除く');
+  assert.equal(cleanMissType('   '), undefined);
+  assert.equal(cleanMissType(5), undefined, '文字でなければ送らない');
+});
