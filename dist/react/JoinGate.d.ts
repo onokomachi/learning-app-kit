@@ -35,7 +35,7 @@ export declare function UnlockPrompt({ config, student, action, onUnlocked, onCl
  * （PlayModeGate）。ここに入れておけば、どの単元アプリも kit を上げるだけで入る。
  */
 export type JoinChipPosition = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
-export declare function JoinGate({ config, chip, allowWithout, onDemo }: {
+export declare function JoinGate({ config, chip, allowWithout, onDemo, playMode }: {
     config: ResolveConfig;
     /**
      * 学級コードが必須（PRISM の「ログイン必須」）でも、名乗らずに使ってよいときに true を返す。
@@ -50,6 +50,12 @@ export declare function JoinGate({ config, chip, allowWithout, onDemo }: {
      * 子どもから見て「右下＝学級とのつながり」が1か所にまとまる。
      */
     chip?: JoinChipPosition | false;
+    /**
+     * 名乗った子に 授業の時間だけ「ひとりか、ふたりで1台か」（SOLO/DUO の PlayModeGate）を聞くか。既定は true（今までどおり）。
+     * false にすると出さない（記録は いつも SOLO）。ふたりで学ぶ記録を想定しないゲーム（CAT-WARS。2026-11-16）が使う。
+     * 名乗り・ログイン必須・体験版・単元の鍵（AppAccessGate）の動きは変わらない。
+     */
+    playMode?: boolean;
 }): import("react").JSX.Element;
 /**
  * 設定パネルに置く1行。いまの状態を見せ、押すと名乗り直せる。

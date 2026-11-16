@@ -187,7 +187,7 @@ test('カタログ catwars: 教科「ゲーム」・学年4・町ごとに単元
   const c = CATALOGS.catwars!;
   assert.equal(c.subject, 'ゲーム');
   assert.equal(c.grade, 4);
-  assert.equal(c.url, undefined, 'SOL にまだ出さないので url は入れない');
+  assert.equal(c.url, 'https://battlemath04catwars.vercel.app', 'apps.url と同じ（SOL の SANMON タブ・体験の入口が使う）');
   assert.deepEqual(c.modules.map((m) => m.module_id), SANMON_UNITS.filter((u) => u.appId).map((u) => u.key));
   for (const m of c.modules) {
     const u = SANMON_UNITS.find((x) => x.key === m.module_id)!;

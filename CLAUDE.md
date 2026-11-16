@@ -23,7 +23,8 @@
 普通のリンクは、PRISM の「ログイン必須」スイッチ（`portal_settings.require_join`）を入れると JoinGate が名乗るまで閉じられない入力画面を出す（はじめは切）。設定はサーバの `portal_app_config`（origin で見分ける）。
 
 **CAT-WARS（2026-11-16〜）**: モードの鍵 `catwars`（`SANMON_MODES`。平日モード・番号ごとの停止も同じしくみ）は **書いていなければ閉じている**（`SANMON_MODES_DEFAULT_CLOSED`・`isModeOpen`。サーバの `_sanmon_effective_modes` も false を返す）。ほかの鍵は今までどおり「書いていなければ開く」。
-カタログ `catwars`（教科「ゲーム」・url なし）は `scripts/gen-catwars-catalog.ts` で作る（単元アプリのカタログを変えたら作り直す）。セーブは `loadCatwarsSave`／`saveCatwarsSave`。バトル1回の数は `sanmonBattleCost`。
+カタログ `catwars`（教科「ゲーム」・url は `apps.url` と同じ。2026-11-16 CW-5c〜）は `scripts/gen-catwars-catalog.ts` で作る（単元アプリのカタログを変えたら作り直す）。セーブは `loadCatwarsSave`／`saveCatwarsSave`。バトル1回の数は `sanmonBattleCost`。
+体験版の項目は `TRIAL_FEATURE_SETS.catwars`（出撃・ネコ部隊・あつめる）。`JoinGate` の `playMode={false}` で SOLO/DUO を出さない（CAT-WARS が使う。既定は true）。
 
 <!-- platform:begin（learning-app-kit が配る。手で書きかえない。直すときは kit の platform/CLAUDE.common.md） -->
 **SANMON の町のスタミナ（2026-11-09〜）**: 単元アプリの正解でたまる分は、その町の「町のスタミナ」（50まで。`SANMON_RULES.townCap`）。がんばりボーナスは「共通スタミナ」（100まで。`SanmonStatus.stamina`）。

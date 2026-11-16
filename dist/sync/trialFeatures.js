@@ -24,6 +24,11 @@ export const TRIAL_FEATURE_SETS = {
         { key: 'review', label: '復習' },
         { key: 'mock_test', label: '本番テスト' },
     ],
+    catwars: [
+        { key: 'sortie', label: '出撃（たたかい）' },
+        { key: 'army', label: 'ネコ部隊・なかま・バフ' },
+        { key: 'collection', label: 'あつめる（図鑑・バッジ・カプセル）' },
+    ],
     whole: [],
 };
 const KOKUGO = new Set(['gongitsune', 'hitotsunohana', 'shiroiboushi', 'upandloose', 'kougeihin']);
@@ -35,6 +40,8 @@ export function trialFamilyOf(appId) {
         return 'eigo';
     if (appId === 'sanmon')
         return 'sanmon';
+    if (appId === 'catwars')
+        return 'catwars';
     if (appId === 'tsunagi')
         return 'whole';
     return 'math';

@@ -20,6 +20,7 @@ import { PlayModeGate } from './PlayModeGate.js';
 import { AppAccessGate } from './AppAccessGate.js';
 import { isTrial, loadPortalConfig, trialHit } from '../sync/index.js';
 import { usePortalConfig, TrialBanner, TrialNotListed } from './TrialGate.js';
+import { joinGateView } from './joinGateView.js';
 const S = {
     scrim: {
         position: 'fixed', inset: 0, zIndex: 9999,
@@ -171,7 +172,7 @@ function JoinChip({ config, position, onOpen }) {
             fontFamily: 'system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
         }, children: "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u3092 \u5165\u308C\u308B" }));
 }
-export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }) {
+export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo, playMode = true }) {
     const [open, setOpen] = useState(false);
     // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
     const [fromChip, setFromChip] = useState(false);
@@ -198,16 +199,20 @@ export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }
         setOpen(true);
     }, [config.supabaseUrl, config.supabaseKey]);
     const configured = !!config.supabaseUrl && !!config.supabaseKey;
+    const view = joinGateView({
+        trial, configured, requireJoin: !!portalCfg?.requireJoin, named: !!student, allowWithout: !!allowWithout?.(),
+        open, playMode, chip: !!chip,
+    });
     // 体験中（SOL の体験の入口から開いたタブ）：名乗り・単元の鍵・SOLO/DUO は出さない。しるしと「出さない」アプリの画面だけ
-    if (trial) {
+    if (view.kind === 'trial') {
         return (_jsxs(_Fragment, { children: [_jsx(TrialBanner, {}), portalCfg && !portalCfg.trialListed && _jsx(TrialNotListed, {})] }));
     }
     // 普通のリンクで学級コードが必須（PRISM の管理タブのスイッチ）：名乗るまで閉じられない入力画面
-    if (configured && portalCfg?.requireJoin && !student && !allowWithout?.()) {
+    if (view.kind === 'required') {
         return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, required: true, onDemo: onDemo }) }) }));
     }
-    if (!open) {
-        return (_jsxs(_Fragment, { children: [_jsx(PlayModeGate, { enabled: configured }), _jsx(AppAccessGate, { config: config }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
+    if (view.kind === 'parts') {
+        return (_jsxs(_Fragment, { children: [view.playMode && _jsx(PlayModeGate, { enabled: configured }), _jsx(AppAccessGate, { config: config }), chip && _jsx(JoinChip, { config: config, position: chip, onOpen: () => { setFromChip(true); setOpen(true); } })] }));
     }
     return (_jsx("div", { style: S.scrim, role: "dialog", "aria-label": "\u304C\u3063\u304D\u3085\u3046\u30B3\u30FC\u30C9\u306E\u5165\u529B", children: _jsx("div", { style: S.card, children: _jsx(JoinForm, { config: config, onSkip: fromChip ? undefined : () => { chooseAnonymous(); setOpen(false); }, onClose: () => { setOpen(false); setFromChip(false); } }) }) }));
 }
