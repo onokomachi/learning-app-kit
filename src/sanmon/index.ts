@@ -35,6 +35,8 @@ export const SANMON_RULES = {
   maxStamina: 100,
   /** 町のスタミナ（その単元アプリの正解でたまる。その町のぼうけんでだけ使える。2026-11-09〜）の上限 */
   townCap: 50,
+  /** アプリの無い町（大きい数・折れ線グラフ・角）のバトル1回（2026-11-12〜。サーバの _sanmon_town_cost） */
+  noAppTownCost: 3,
 } as const;
 
 export interface SanmonUnitRule {
@@ -248,6 +250,46 @@ export function sanmonTownKeyOf(unitName: string | null | undefined): string | n
 }
 
 /**
+ * その町の達成度（0〜1）＝その町の単元アプリの練習の項目のうち、熟達（5問れんぞくノーミス）した割合。
+ * 項目は町の解放の「練習」のメーターと同じ（カタログの modules。サーバの表 sanmon_town_skill も同じ一覧から作る）。
+ * アプリの無い町・知らない町は null。
+ */
+export function sanmonTownMastery(
+  status: Pick<SanmonStatus, 'apps'> | null | undefined,
+  townKey: string | null | undefined,
+  catalogs: Record<string, AppCatalog> = CATALOGS,
+): number | null {
+  const unit = townKey ? SANMON_UNITS.find((u) => u.key === townKey) : undefined;
+  if (!unit?.appId) return null;
+  const c = catalogs[unit.appId];
+  const skills = c ? skillsOf(c, unit.modules) : [];
+  if (skills.length === 0) return null;
+  const mastered = new Set(status?.apps?.[unit.appId]?.mastered ?? []);
+  return skills.filter((s) => mastered.has(s)).length / skills.length;
+}
+
+/**
+ * バトル1回（SANMON のぼうけん・CAT-WARS の出撃）のスタミナ（2026-11-11・11-12 先生と決めた）。
+ *   達成度 100％ → 2、75％以上 → 3、50％以上 → 4、それより下 → 5。アプリの無い町は 3。町の無いバトル・知らない町は 5。
+ * 決めるのはサーバ（sanmon_spend が _sanmon_town_cost で計算する。送った数は使われない）。
+ * ここは画面に「1回 n」「あと n回」を出すための同じ数え方（SANMON の utils/townCost.ts と CAT-WARS の portal/stamina.ts の写しを1つにしたもの）。
+ */
+export function sanmonBattleCost(
+  status: Pick<SanmonStatus, 'apps'> | null | undefined,
+  townKey: string | null | undefined,
+  catalogs: Record<string, AppCatalog> = CATALOGS,
+): number {
+  const unit = townKey ? SANMON_UNITS.find((u) => u.key === townKey) : undefined;
+  if (unit && !unit.appId) return SANMON_RULES.noAppTownCost;
+  const r = sanmonTownMastery(status, townKey, catalogs);
+  if (r == null) return SANMON_RULES.battleCost;
+  if (r >= 1) return 2;
+  if (r >= 0.75) return 3;
+  if (r >= 0.5) return 4;
+  return SANMON_RULES.battleCost;
+}
+
+/**
  * スタミナを使う。足りなければ ok=false（使わない）。
  * eventId はバトルごとに1つ。同じ eventId で送り直しても二重に減らない。
  * ぼうけんの町のバトルは reason の後ろに「@町の key」を付ける（例 'wild@div1'）。サーバが 町 → 共通 の順に使う。@ が無いと共通だけ。
@@ -271,6 +313,17 @@ export async function saveSanmonSave(config: ResolveConfig, studentId: string, d
   return r.ok;
 }
 
+/** CAT-WARS のセーブデータ（SANMON と同じ形。サーバの表 catwars_save。2026-11-16〜） */
+export async function loadCatwarsSave(config: ResolveConfig, studentId: string) {
+  const r = await rpc<Record<string, unknown> | null>(config, 'catwars_save_get', { p_student_id: studentId });
+  return r.ok ? { ok: true as const, data: r.data } : r;
+}
+
+export async function saveCatwarsSave(config: ResolveConfig, studentId: string, data: Record<string, unknown>) {
+  const r = await rpc<boolean>(config, 'catwars_save_put', { p_student_id: studentId, p_data: data });
+  return r.ok;
+}
+
 /* ------------------------------------------------------------------ */
 /* モードの開け閉め（先生が PRISM の SANMON タブで、学級ごとに決める）     */
 /* ------------------------------------------------------------------ */
@@ -284,6 +337,8 @@ export const SANMON_MODES = [
   { key: 'speed', label: 'スピードデュエル', desc: 'コンピュータと早押し' },
   { key: 'monster', label: 'モンスター対戦（コンピュータ）', desc: 'つかまえたモンスターのパーティ（3匹か5匹）で、コンピュータと対戦' },
   { key: 'class_duel', label: 'クラス対戦', desc: '同じ学級の友だちと、モンスターのパーティで対戦' },
+  // CAT-WARS（2026-11-16〜。SANMON とは別のゲームだが、開け閉め・平日モード・番号ごとの停止は同じしくみ）。はじめは閉じている
+  { key: 'catwars', label: 'CAT-WARS', desc: 'ネコ軍団の タワーディフェンス（問題を といて ⚡。はじめは閉じている）' },
   { key: 'practice', label: '練習', desc: '分野をえらんで問題をとく' },
   { key: 'review', label: '復習', desc: 'まちがえた問題を ちょうどよいころに' },
   { key: 'mock_test', label: '本番テスト', desc: '学校のテストの形で' },
@@ -292,8 +347,15 @@ export const SANMON_MODES = [
 export type SanmonModeKey = (typeof SANMON_MODES)[number]['key'];
 
 /**
+ * 先生が開けるまで閉じているモード（サーバの表に書いていなければ閉じている）。
+ * サーバの _sanmon_effective_modes も、書いていなければ false を返す（古い kit のアプリでも閉じて見える）。
+ * ここに無いモードは今までどおり「書いていなければ開いている」。
+ */
+export const SANMON_MODES_DEFAULT_CLOSED = ['catwars'] as const satisfies readonly SanmonModeKey[];
+
+/**
  * 平日モード（2026-10-26 先生と決めた）。先生が PRISM で学級ごとにオンにすると、
- * 月〜金（祝日をのぞく）の start〜end は、modes のモード（ゲームの4つから えらぶ）が閉じる。
+ * 月〜金（祝日をのぞく）の start〜end は、modes のモード（ゲームの5つ（SANMON の4つと CAT-WARS）から えらぶ）が閉じる。
  * 判定はサーバの時計（日本時間。サーバの _sanmon_effective_modes）でする。iPad の時計を変えても抜けられない。
  * サーバは閉じたモードを false にして返すので、isModeOpen だけで効く（古いアプリでも効く）。
  */
@@ -312,15 +374,17 @@ export interface SanmonSchoolHours {
 }
 
 /** 平日モードで閉じられるモード（ゲームだけ。練習・復習・本番テストは学習なので閉じない） */
-export const SCHOOL_HOURS_MODES = ['adventure', 'speed', 'monster', 'class_duel'] as const satisfies readonly SanmonModeKey[];
+export const SCHOOL_HOURS_MODES = ['adventure', 'speed', 'monster', 'class_duel', 'catwars'] as const satisfies readonly SanmonModeKey[];
 /** 平日モードの はじめの値 */
 export const SCHOOL_HOURS_DEFAULT = { start: '08:00', end: '15:30', modes: [...SCHOOL_HOURS_MODES] as SanmonModeKey[] };
 
-/** 書いていないモードは開いている（false のときだけ閉じる） */
+/** 書いていないモードは開いている（false のときだけ閉じる）。SANMON_MODES_DEFAULT_CLOSED のモードだけは、書いていなければ閉じている */
 export type SanmonModes = Partial<Record<SanmonModeKey, boolean>> & { _school_hours?: SanmonSchoolHours };
 
 export function isModeOpen(modes: SanmonModes | null | undefined, key: SanmonModeKey): boolean {
-  return modes?.[key] !== false;
+  const v = modes?.[key];
+  if (v === undefined || v === null) return !(SANMON_MODES_DEFAULT_CLOSED as readonly string[]).includes(key);
+  return v !== false;
 }
 
 /** そのモードが平日モード（授業の時間）で閉じているか */
@@ -335,7 +399,9 @@ export function isSchoolHoursLocked(modes: SanmonModes | null | undefined, key: 
  */
 export function modeLockMessage(modes: SanmonModes | null | undefined, key: SanmonModeKey): string | null {
   if (isModeOpen(modes, key)) return null;
-  if (isSchoolHoursLocked(modes, key)) {
+  // 先生がまだ開いていない（平日モードの前の開け閉め base で閉じている）なら、時間の文は出さない（時間がきても開かないため）
+  const base = modes?._school_hours?.base;
+  if (isSchoolHoursLocked(modes, key) && (!base || isModeOpen(base, key))) {
     return `いまは じゅぎょうの じかん。${modes!._school_hours!.end}から あそべるよ（れんしゅう・ふくしゅう・テストは できるよ）`;
   }
   return '先生が まだ ひらいていないよ';
@@ -367,7 +433,7 @@ const MODES_CACHE_KEY = 'lak_sanmon_modes_v1';
 /**
  * 自分の学級のモードの開け閉めを読む。
  * 読めたら端末に覚えておく。読めないときは、前に読めた設定で平日モードだけは効かせる（通信を切って抜けられないように）。
- * 一度も読めていなければ すべて開いている扱い（ok: false）。
+ * 一度も読めていなければ すべて開いている扱い（ok: false。ただし SANMON_MODES_DEFAULT_CLOSED の CAT-WARS は isModeOpen で閉じている）。
  */
 export async function fetchSanmonModes(config: ResolveConfig, studentId: string) {
   const r = await rpc<SanmonModes | null>(config, 'sanmon_modes', { p_student_id: studentId });
