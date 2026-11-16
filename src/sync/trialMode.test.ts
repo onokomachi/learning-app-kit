@@ -135,6 +135,9 @@ test('体験のリンク・種類・算数の画面のキー', () => {
   assert.equal(trialFamilyOf('sanmon'), 'sanmon');
   assert.equal(trialFamilyOf('tsunagi'), 'whole');
   assert.equal(trialFamilyOf('gaisu'), 'math');
+  // CAT-WARS は算数の4つ（練習・本番テスト…）ではなく、ホームの入口の3つ（2026-11-16 CW-5c）
+  assert.equal(trialFamilyOf('catwars'), 'catwars');
+  assert.deepEqual(TRIAL_FEATURE_SETS.catwars.map((f) => f.key), ['sortie', 'army', 'collection']);
   assert.equal(mathTrialKey('BOSS'), 'boss');
   assert.equal(mathTrialKey('REFLECT'), 'test');
   assert.equal(mathTrialKey('HUB'), null);

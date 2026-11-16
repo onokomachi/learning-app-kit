@@ -6,9 +6,10 @@
  * - 国語（本文あり）：本文・問題・漢字・組み立て（対比）
  * - 英語：教材A・教材B・Can-Do チェック
  * - SANMON：モード（クラス対戦は学級が要るので、体験ではいつも閉じる）
+ * - CAT-WARS：ホームの入口の3つ（出撃・ネコ部隊・あつめる。2026-11-16 CW-5c）。SANMON と同じく 少なく
  * - つなぎ言葉：項目なし（アプリ全体を出す／出さないだけ）
  */
-export type TrialFamily = 'math' | 'kokugo' | 'eigo' | 'sanmon' | 'whole';
+export type TrialFamily = 'math' | 'kokugo' | 'eigo' | 'sanmon' | 'catwars' | 'whole';
 export interface TrialFeature {
     key: string;
     label: string;

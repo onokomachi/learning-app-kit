@@ -22,6 +22,7 @@ import { PlayModeGate } from './PlayModeGate.js';
 import { AppAccessGate } from './AppAccessGate.js';
 import { isTrial, loadPortalConfig, trialHit } from '../sync/index.js';
 import { usePortalConfig, TrialBanner, TrialNotListed } from './TrialGate.js';
+import { joinGateView } from './joinGateView.js';
 
 const S = {
   scrim: {
@@ -290,7 +291,7 @@ function JoinChip({ config, position, onOpen }: {
   );
 }
 
-export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }: {
+export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo, playMode = true }: {
   config: ResolveConfig;
   /**
    * 学級コードが必須（PRISM の「ログイン必須」）でも、名乗らずに使ってよいときに true を返す。
@@ -305,6 +306,12 @@ export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }
    * 子どもから見て「右下＝学級とのつながり」が1か所にまとまる。
    */
   chip?: JoinChipPosition | false;
+  /**
+   * 名乗った子に 授業の時間だけ「ひとりか、ふたりで1台か」（SOLO/DUO の PlayModeGate）を聞くか。既定は true（今までどおり）。
+   * false にすると出さない（記録は いつも SOLO）。ふたりで学ぶ記録を想定しないゲーム（CAT-WARS。2026-11-16）が使う。
+   * 名乗り・ログイン必須・体験版・単元の鍵（AppAccessGate）の動きは変わらない。
+   */
+  playMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // すみの入口から開いたとき（「コードを入れずに つかう」は出さず「やめる」にする）
@@ -332,8 +339,13 @@ export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }
 
   const configured = !!config.supabaseUrl && !!config.supabaseKey;
 
+  const view = joinGateView({
+    trial, configured, requireJoin: !!portalCfg?.requireJoin, named: !!student, allowWithout: !!allowWithout?.(),
+    open, playMode, chip: !!chip,
+  });
+
   // 体験中（SOL の体験の入口から開いたタブ）：名乗り・単元の鍵・SOLO/DUO は出さない。しるしと「出さない」アプリの画面だけ
-  if (trial) {
+  if (view.kind === 'trial') {
     return (
       <>
         <TrialBanner />
@@ -343,7 +355,7 @@ export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }
   }
 
   // 普通のリンクで学級コードが必須（PRISM の管理タブのスイッチ）：名乗るまで閉じられない入力画面
-  if (configured && portalCfg?.requireJoin && !student && !allowWithout?.()) {
+  if (view.kind === 'required') {
     return (
       <div style={S.scrim} role="dialog" aria-label="がっきゅうコードの入力">
         <div style={S.card}>
@@ -353,10 +365,10 @@ export function JoinGate({ config, chip = 'bottom-right', allowWithout, onDemo }
     );
   }
 
-  if (!open) {
+  if (view.kind === 'parts') {
     return (
       <>
-        <PlayModeGate enabled={configured} />
+        {view.playMode && <PlayModeGate enabled={configured} />}
         {/* 先生がまだ開いていない単元（PRISM の SOL タブ・学級ごと）は、名乗った子には止める */}
         <AppAccessGate config={config} />
         {chip && <JoinChip config={config} position={chip} onOpen={() => { setFromChip(true); setOpen(true); }} />}

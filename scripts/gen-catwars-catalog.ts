@@ -12,7 +12,8 @@
  *   - わり算の筆算は2つの町に分ける：筆算そのもの hissan-?-1 は ÷1けた、hissan-?-2・?-3 は ÷2けた。ほかの項目は下の きまりで ÷1けた に入る
  *   - 1つの項目は1つの町にだけ入れる（カタログの中で skill_id を一意にするきまり。lookupSkill も先の町を返す）。
  *     わり算の筆算の共有の項目（検算など）は先の町（÷1けた）に入る。CAT-WARS が送る module_id（町）とは ずれることがある
- * url は入れない（SOL にまだ出さないため。SOL の「じぶんの きろく」は url があると アプリへのボタンを出す）。出すときに足す。
+ * url は apps.url と同じ（2026-11-16 CW-5c で入れた。SOL の SANMON タブの入口・体験の入口が使う）。
+ * SOL の「じぶんの きろく」・ふくしゅう・単元の一覧は url があると アプリへのボタンを出すので、SOL の側（lib/solApps.ts の onSol）で外している。
  * 単元アプリのカタログ・SANMON_UNITS を変えたら、作り直す。
  */
 import { CATALOGS } from '../src/catalog/index.js';
@@ -48,6 +49,7 @@ const catalog: AppCatalog = {
   title: 'CAT-WARS',
   subject: 'ゲーム',
   grade: 4,
+  url: 'https://battlemath04catwars.vercel.app',
   generated_at: process.env.GEN_DATE ?? new Date().toISOString().slice(0, 10),
   skill_count: modules.reduce((n, m) => n + m.skills.length, 0),
   modules,
@@ -59,7 +61,7 @@ process.stdout.write(`/**
  *
  * 手で編集しないこと。scripts/gen-catwars-catalog.ts で再生成する
  * （単元アプリのカタログ・SANMON_UNITS から作る。モジュール＝町、項目＝その町の単元アプリの skill_id）。
- * 教科「ゲーム」：SOL の単元の一覧には出ない（SANMON と同じ）。url はまだ入れない（SOL に出さないため）。
+ * 教科「ゲーム」：SOL の単元の一覧には出ない（SANMON と同じ）。url は apps.url と同じ（SOL の SANMON タブ・体験の入口が使う）。
  */
 import type { AppCatalog } from './types.js';
 

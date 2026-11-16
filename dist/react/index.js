@@ -2,6 +2,7 @@ export { createRoundRecorder } from './roundRecorder.js';
 export { useRoundRecorder } from './useRoundRecorder.js';
 export { JoinGate, JoinSettingsRow, UnlockPrompt } from './JoinGate.js';
 export { AppAccessGate } from './AppAccessGate.js';
+export { joinGateView } from './joinGateView.js';
 export { ScratchPad, ScratchPadToggle } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';
 export { TrialScreen, TrialCard, MiniStairs } from './TrialScreen.js';

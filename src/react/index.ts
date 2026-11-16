@@ -4,6 +4,8 @@ export { useRoundRecorder } from './useRoundRecorder.js';
 export { JoinGate, JoinSettingsRow, UnlockPrompt } from './JoinGate.js';
 export { AppAccessGate } from './AppAccessGate.js';
 export type { JoinChipPosition } from './JoinGate.js';
+export { joinGateView } from './joinGateView.js';
+export type { JoinGateView } from './joinGateView.js';
 export { ScratchPad, ScratchPadToggle } from './ScratchPad.js';
 export type { ScratchPadProps, ScratchOp } from './ScratchPad.js';
 export { PlayModeGate } from './PlayModeGate.js';

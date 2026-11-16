@@ -3,6 +3,7 @@ export const catwars = {
     "title": "CAT-WARS",
     "subject": "ゲーム",
     "grade": 4,
+    "url": "https://battlemath04catwars.vercel.app",
     "generated_at": "2026-11-16",
     "skill_count": 314,
     "modules": [

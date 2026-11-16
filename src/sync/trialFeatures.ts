@@ -6,9 +6,10 @@
  * - 国語（本文あり）：本文・問題・漢字・組み立て（対比）
  * - 英語：教材A・教材B・Can-Do チェック
  * - SANMON：モード（クラス対戦は学級が要るので、体験ではいつも閉じる）
+ * - CAT-WARS：ホームの入口の3つ（出撃・ネコ部隊・あつめる。2026-11-16 CW-5c）。SANMON と同じく 少なく
  * - つなぎ言葉：項目なし（アプリ全体を出す／出さないだけ）
  */
-export type TrialFamily = 'math' | 'kokugo' | 'eigo' | 'sanmon' | 'whole';
+export type TrialFamily = 'math' | 'kokugo' | 'eigo' | 'sanmon' | 'catwars' | 'whole';
 
 export interface TrialFeature { key: string; label: string }
 
@@ -38,6 +39,11 @@ export const TRIAL_FEATURE_SETS: Record<TrialFamily, readonly TrialFeature[]> = 
     { key: 'review', label: '復習' },
     { key: 'mock_test', label: '本番テスト' },
   ],
+  catwars: [
+    { key: 'sortie', label: '出撃（たたかい）' },
+    { key: 'army', label: 'ネコ部隊・なかま・バフ' },
+    { key: 'collection', label: 'あつめる（図鑑・バッジ・カプセル）' },
+  ],
   whole: [],
 };
 
@@ -48,6 +54,7 @@ export function trialFamilyOf(appId: string): TrialFamily {
   if (KOKUGO.has(appId)) return 'kokugo';
   if (appId === 'eigo4') return 'eigo';
   if (appId === 'sanmon') return 'sanmon';
+  if (appId === 'catwars') return 'catwars';
   if (appId === 'tsunagi') return 'whole';
   return 'math';
 }
