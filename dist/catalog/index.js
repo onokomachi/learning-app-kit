@@ -1,4 +1,5 @@
 import { hitotsunohana } from './hitotsunohana.js';
+import { yujo } from './yujo.js';
 import { gongitsune } from './gongitsune.js';
 import { tsunagi } from './tsunagi.js';
 import { upandloose } from './upandloose.js';
@@ -54,7 +55,7 @@ function withExtras(c) {
     return { ...c, extra_modules: [...merged.values()] };
 }
 /** app_id → カタログ。新しいアプリはここに足す。 */
-export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, bunsuuKakewari, hitosono, menseki, heikin, eigo4, bunsuu4, menseki4, rippoutai, taiseki, sanmon, syousu5, kougeihin, catwars]
+export const CATALOGS = Object.fromEntries([hitotsunohana, gongitsune, upandloose, shiroiboushi, tsunagi, suihei, bai, gaisu, hissan, kakudaizu, karakuri, kawari, suusei, syousu, hirei, data, oyoso, bunsuuSeisuu, bunsuuTasizanHikizan, bunsuuKakewari, hitosono, menseki, heikin, eigo4, bunsuu4, menseki4, rippoutai, taiseki, sanmon, syousu5, kougeihin, catwars, yujo]
     .map(withExtras)
     .map((c) => [c.app_id, c]));
 /** 登録済みのアプリ一覧（ダッシュボードの単元セレクタなどに使う） */
