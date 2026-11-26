@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanmonBattleCost, sanmonTownMastery, SCHOOL_HOURS_MODES, SCHOOL_HOURS_DEFAULT, SANMON_MODES_DEFAULT_CLOSED, SANMON_RULES, isSchoolHoursLocked, staminaForTown, sanmonTownKeyOf, sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, modeLockMessage, inSchoolHoursLocal, offlineModes, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus, type SanmonModes, type SanmonModeKey } from './index.js';
+import { SANMON_TRIAL_RULES, sanmonTrialUnits, sanmonTrialEarn, sanmonTownOfSubtopic, sanmonBattleCost, sanmonTownMastery, SCHOOL_HOURS_MODES, SCHOOL_HOURS_DEFAULT, SANMON_MODES_DEFAULT_CLOSED, SANMON_RULES, isSchoolHoursLocked, staminaForTown, sanmonTownKeyOf, sanmonUnits, openUnitKeys, SANMON_UNITS, SANMON_MODES, isModeOpen, modeLockMessage, inSchoolHoursLocal, offlineModes, sanmonShards, levelCapFor, SANMON_GROWTH, type SanmonStatus, type SanmonModes, type SanmonModeKey } from './index.js';
 import { CATALOGS } from '../catalog/index.js';
 
 const empty: SanmonStatus = { stamina: 0, earnedToday: 0, apps: {} };
@@ -210,4 +210,103 @@ test('カタログ catwars: 教科「ゲーム」・学年4・町ごとに単元
   // SANMON の町の解放・かけら は SANMON_UNITS を回すので、catwars があっても変わらない
   assert.ok(sanmonUnits(empty).every((u) => u.appId !== 'catwars'));
   assert.equal(sanmonShards(null).length, SANMON_UNITS.length);
+});
+
+/* ---- 体験・おためしのきまり（2026-11-26） ---- */
+
+const subs = (key: string) => CATALOGS.sanmon.modules.find((m) => m.module_id === key)!.skills.map((s) => s.skill_id);
+
+test('体験: 町の key は sanmon カタログの module_id と全部一致する', () => {
+  const ids = new Set(CATALOGS.sanmon.modules.map((m) => m.module_id));
+  for (const u of SANMON_UNITS) assert.ok(ids.has(u.key), `${u.key} が module_id に無い`);
+  assert.equal(sanmonTownOfSubtopic(subs('div2')[0]), 'div2');
+  assert.equal(sanmonTownOfSubtopic(subs('decmuldiv')[0]), 'decmuldiv');
+  assert.equal(sanmonTownOfSubtopic('nothing'), null);
+  assert.equal(sanmonTownOfSubtopic(subs('graph')[0], {}), null);
+});
+
+test('体験: 何も熟達していなければ、アプリの無い3町だけ開いている', () => {
+  const units = sanmonTrialUnits([]);
+  assert.deepEqual(units.map((u) => u.key), SANMON_UNITS.map((u) => u.key));
+  assert.deepEqual([...openUnitKeys(units)].sort(), ['angle', 'bignum', 'graph']);
+  const d = units.find((u) => u.key === 'div1')!;
+  assert.deepEqual(d.practice, { have: 0, need: 3, done: false });
+  assert.equal(d.test, undefined); assert.equal(d.trial, undefined); assert.equal(d.days, undefined);
+  assert.equal(d.appId, 'hissan');
+});
+
+test('体験: その町のサブトピック3つで開く（2つでは開かない）。ほかの町の分は数えない', () => {
+  const s = subs('area');
+  assert.equal(sanmonTrialUnits(s.slice(0, 2)).find((u) => u.key === 'area')!.open, false);
+  const u = sanmonTrialUnits(s.slice(0, 3)).find((x) => x.key === 'area')!;
+  assert.equal(u.open, true);
+  assert.deepEqual(u.practice, { have: 3, need: 3, done: true });
+  // 別の町のサブトピックでは開かない
+  assert.equal(sanmonTrialUnits(subs('ratio').slice(0, 5)).find((x) => x.key === 'area')!.open, false);
+  // 町のぜんぶを熟達しても、ほかの町は開かない
+  assert.deepEqual([...openUnitKeys(sanmonTrialUnits(s))].sort(), ['angle', 'area', 'bignum', 'graph']);
+});
+
+test('体験: 同じアプリの2つの町（小数・わり算の筆算）は それぞれのサブトピックで数える', () => {
+  const open = (m: string[]) => [...openUnitKeys(sanmonTrialUnits(m))].filter((k) => !['angle', 'bignum', 'graph'].includes(k));
+  assert.deepEqual(open(subs('decimal').slice(0, 3)), ['decimal']);
+  assert.deepEqual(open(subs('decmuldiv').slice(0, 3)), ['decmuldiv']);
+  assert.deepEqual(open(subs('div1').slice(0, 3)), ['div1']);
+  assert.deepEqual(open(subs('div2').slice(0, 3)), ['div2']);
+});
+
+test('体験: 町のサブトピックが3つ未満なら、その数で開く', () => {
+  const small = { sanmon: { ...CATALOGS.sanmon, modules: CATALOGS.sanmon.modules.map((m) => (m.module_id === 'solid' ? { ...m, skills: m.skills.slice(0, 2) } : m)) } };
+  const two = small.sanmon.modules.find((m) => m.module_id === 'solid')!.skills.map((s) => s.skill_id);
+  const before = sanmonTrialUnits([two[0]], { ...CATALOGS, ...small }).find((u) => u.key === 'solid')!;
+  assert.deepEqual(before.practice, { have: 1, need: 2, done: false });
+  assert.equal(before.open, false);
+  const after = sanmonTrialUnits(two, { ...CATALOGS, ...small }).find((u) => u.key === 'solid')!;
+  assert.deepEqual(after.practice, { have: 2, need: 2, done: true });
+  assert.equal(after.open, true);
+});
+
+test('体験: カタログ sanmon が無いときは、アプリのある町は閉じたまま', () => {
+  const { sanmon: _omit, ...rest } = CATALOGS;
+  const units = sanmonTrialUnits(['x', 'y', 'z'], rest);
+  assert.deepEqual([...openUnitKeys(units)].sort(), ['angle', 'bignum', 'graph']);
+  assert.deepEqual(units.find((u) => u.key === 'area')!.practice, { have: 0, need: SANMON_TRIAL_RULES.unlockMastered, done: false });
+});
+
+test('体験: 学級の判定（sanmonUnits）は変わらない', () => {
+  assert.deepEqual([...openUnitKeys(sanmonUnits(empty))].sort(), ['angle', 'bignum', 'graph']);
+  assert.equal(SANMON_RULES.battleCost, 5);
+  assert.equal(SANMON_RULES.townCap, 50);
+});
+
+test('体験: スタミナのきまりの数', () => {
+  assert.deepEqual(SANMON_TRIAL_RULES, { unlockMastered: 3, masteryStreak: 5, startStamina: 20, townCap: 50, battleCost: 3, perSkillDaily: 5, masteredFactor: 0.5 });
+});
+
+test('体験: 正解1問で +1。1つの項目は1日5まで', () => {
+  let r = { earnedToday: 0, stamina: SANMON_TRIAL_RULES.startStamina };
+  for (let i = 0; i < 5; i++) {
+    const e = sanmonTrialEarn({ ...r, mastered: false });
+    assert.equal(e.gain, 1);
+    r = { earnedToday: e.earnedToday, stamina: e.stamina };
+  }
+  assert.deepEqual(r, { earnedToday: 5, stamina: 25 });
+  const sixth = sanmonTrialEarn({ ...r, mastered: false });
+  assert.deepEqual(sixth, { gain: 0, earnedToday: 5, stamina: 25 });
+});
+
+test('体験: 熟達した項目は半分（0.5）。1日5までは同じ', () => {
+  const e = sanmonTrialEarn({ earnedToday: 0, mastered: true, stamina: 20 });
+  assert.deepEqual(e, { gain: 0.5, earnedToday: 0.5, stamina: 20.5 });
+  // 4.5 のあと 0.5 で ちょうど5。そのあとは 0
+  assert.equal(sanmonTrialEarn({ earnedToday: 4.5, mastered: true, stamina: 30 }).gain, 0.5);
+  assert.equal(sanmonTrialEarn({ earnedToday: 5, mastered: true, stamina: 30 }).gain, 0);
+  // 熟達していない項目が 4.5 のとき、+1 は枠の残り 0.5 で切れる
+  assert.equal(sanmonTrialEarn({ earnedToday: 4.5, mastered: false, stamina: 30 }).gain, 0.5);
+});
+
+test('体験: 町のスタミナは50で切る（切れた分は項目の1日の枠を使わない）', () => {
+  assert.deepEqual(sanmonTrialEarn({ earnedToday: 0, mastered: false, stamina: 49 }), { gain: 1, earnedToday: 1, stamina: 50 });
+  assert.deepEqual(sanmonTrialEarn({ earnedToday: 2, mastered: false, stamina: 50 }), { gain: 0, earnedToday: 2, stamina: 50 });
+  assert.deepEqual(sanmonTrialEarn({ earnedToday: 0, mastered: true, stamina: 49.75 }), { gain: 0.25, earnedToday: 0.25, stamina: 50 });
 });

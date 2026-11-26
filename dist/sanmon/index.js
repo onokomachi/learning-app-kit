@@ -212,6 +212,73 @@ export function sanmonBattleCost(status, townKey, catalogs = CATALOGS) {
         return 4;
     return SANMON_RULES.battleCost;
 }
+/* ------------------------------------------------------------------ */
+/* 体験・おためしのきまり（端末の中だけで数える）                        */
+/* ------------------------------------------------------------------ */
+/**
+ * 体験版（SOL の体験の入口 #trial）と「おためし」（学級コードなし）のきまり（2026-11-26 先生と決めた）。
+ * 学級コードで名乗っていない子は記録をサーバに送らないので、町の解放とスタミナを **端末の中だけ** で数える。
+ * 名乗った子（学級）のきまり（SANMON_RULES・sanmonUnits・サーバの sanmon_status）は変わらない。
+ *
+ * - 町の解放：アプリの無い町は はじめから開く。ほかの町は、SANMON の「れんしゅう・ふくしゅう」で
+ *   その町のサブトピックのうち unlockMastered 個を熟達（masteryStreak 問れんぞくノーミス）にしたら開く
+ *   （町のサブトピックが それより少なければ その数）。
+ * - スタミナ（町ごと）：町が開いたとき（はじめから開いている町は体験の最初に）startStamina。上限 townCap。バトル1回 battleCost。
+ *   たまり方は本物と同じ：その町の正解1問 +1、1つの項目で1日 perSkillDaily まで、熟達した項目は masteredFactor（半分）。
+ * - スピードデュエル・モンスター対戦は、体験ではスタミナを使わない（判定は SANMON 側）。
+ */
+export const SANMON_TRIAL_RULES = {
+    unlockMastered: 3,
+    masteryStreak: 5,
+    startStamina: 20,
+    townCap: 50,
+    battleCost: 3,
+    perSkillDaily: 5,
+    masteredFactor: 0.5,
+};
+/** サブトピック（カタログ sanmon の skill_id）→ 町の key（SANMON_UNITS の key）。カタログに無ければ null */
+export function sanmonTownOfSubtopic(skillId, catalogs = CATALOGS) {
+    const c = catalogs[SANMON_APP_ID];
+    if (!c)
+        return null;
+    return c.modules.find((m) => m.skills.some((s) => s.skill_id === skillId))?.module_id ?? null;
+}
+/**
+ * 体験・おためしの「町ごとの あと どれだけ」。mastered は SANMON の熟達したサブトピックの skill_id（端末に覚えたもの）。
+ * SANMON_UNITS の並びで返す。アプリの無い町は はじめから開く。ほかは practice のメーター（have／need）だけで開く
+ * （test・trial・days は体験では使わないので undefined）。カタログ sanmon が無いときは閉じたまま。
+ */
+export function sanmonTrialUnits(mastered, catalogs = CATALOGS) {
+    const done = new Set(mastered);
+    const sanmon = catalogs[SANMON_APP_ID];
+    return SANMON_UNITS.map((u) => {
+        if (!u.appId)
+            return { key: u.key, name: u.name, always: true, open: true };
+        const c = catalogs[u.appId];
+        const skills = sanmon ? skillsOf(sanmon, [u.key]) : [];
+        const need = skills.length ? Math.min(SANMON_TRIAL_RULES.unlockMastered, skills.length) : SANMON_TRIAL_RULES.unlockMastered;
+        const practice = meter(skills.filter((s) => done.has(s)).length, need);
+        return {
+            key: u.key, name: u.name, appId: u.appId, appTitle: c?.title, appUrl: c?.url,
+            always: false, open: practice.done, practice,
+        };
+    });
+}
+/**
+ * 体験・おためしで、その町の問題を1問 正解したときの 町のスタミナ。
+ * 本物（サーバの _sanmon_stamina）と同じ たまり方：+1（熟達した項目は +0.5）。
+ * 1つの項目で1日 perSkillDaily まで（earnedToday はその項目のきょうの獲得ぶん）。町のスタミナは townCap で切る。
+ * 返す gain は 実際に増えた数（上限で切れた分は入らない）、earnedToday はその項目の きょうの獲得ぶんの新しい値、
+ * stamina は新しい町のスタミナ。上限で増えなかった分は、その項目の1日の枠を使わない。
+ */
+export function sanmonTrialEarn(input) {
+    const R = SANMON_TRIAL_RULES;
+    const unit = input.mastered ? R.masteredFactor : 1;
+    const dailyLeft = Math.max(0, R.perSkillDaily - Math.max(0, input.earnedToday));
+    const capLeft = Math.max(0, R.townCap - Math.max(0, input.stamina));
+    const gain = Math.min(unit, dailyLeft, capLeft);
+    return { gain, earnedToday: Math.max(0, input.earnedToday) + gain, stamina: Math.max(0, input.stamina) + gain };
+}
 /**
  * スタミナを使う。足りなければ ok=false（使わない）。
  * eventId はバトルごとに1つ。同じ eventId で送り直しても二重に減らない。
